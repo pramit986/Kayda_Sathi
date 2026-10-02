@@ -1,9 +1,9 @@
 // ============================================================
 // Kayda Sathi — VoiceInput Component (expo-audio)
 // ============================================================
-// Uses expo-audio for native voice recording in modern Expo (SDK 52+).
-// Safely handles microphone permissions, encodes audio, sends via
-// FormData to /api/analyze, and returns the legal analysis.
+// Records audio with expo-audio, sends to Gemini speech recognition,
+// and streams the transcribed text directly into the description box
+// so the user can review and edit before AI legal analysis.
 
 import React, { useState, useRef, useEffect } from 'react';
 import {
@@ -31,6 +31,7 @@ export interface VoiceInputProps {
   onError?: (errorMessage: string) => void;
   fallbackText?: string;
   disabled?: boolean;
+  mode?: 'transcribe' | 'analyze';
 }
 
 export const VoiceInput: React.FC<VoiceInputProps> = ({
@@ -39,19 +40,20 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
   onError,
   fallbackText,
   disabled = false,
+  mode = 'transcribe',
 }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
+  const [transcribedFeedback, setTranscribedFeedback] = useState<string | null>(null);
 
-  // Initialize the modern expo-audio recorder hook
+  // Initialize expo-audio recorder
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
-  // Animation values for glowing pulsing rings while recording
+  // Pulse ring animation while recording
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const timerRef = useRef<any>(null);
 
-  // Pulse animation loop
   useEffect(() => {
     let animation: Animated.CompositeAnimation | null = null;
     if (isRecording) {
@@ -81,7 +83,7 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
     };
   }, [isRecording]);
 
-  // Clean up timers on unmount
+  // Clean up timer on unmount
   useEffect(() => {
     return () => {
       if (timerRef.current) {
@@ -95,7 +97,7 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
     if (disabled || isProcessing) return;
 
     try {
-      // 1. Request microphone permissions
+      setTranscribedFeedback(null);
       const permission = await requestRecordingPermissionsAsync();
       if (!permission.granted) {
         Alert.alert(
@@ -106,20 +108,17 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
         return;
       }
 
-      // 2. Configure audio mode
       await setAudioModeAsync({
         allowsRecording: true,
         playsInSilentMode: true,
       });
 
-      // 3. Prepare and start recording
       await recorder.prepareToRecordAsync();
       recorder.record();
 
       setIsRecording(true);
       setRecordingDuration(0);
 
-      // Start elapsed timer
       timerRef.current = setInterval(() => {
         setRecordingDuration((prev) => prev + 1);
       }, 1000);
@@ -132,10 +131,9 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
     }
   };
 
-  const stopRecordingAndAnalyze = async () => {
+  const stopRecording = async () => {
     if (!isRecording) return;
 
-    // Stop duration timer
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
@@ -152,17 +150,23 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
         throw new Error('Recording URI is null. Audio file could not be retrieved.');
       }
 
-      // Send to backend via FormData
-      const result = await api.analyzeVoice(uri, fallbackText);
-
-      if (result.transcribed_text) {
-        onTranscribeSuccess?.(result.transcribed_text);
+      if (mode === 'transcribe') {
+        // Step 1: Transcribe speech into text directly for user review/edit
+        const text = await api.transcribeVoice(uri, fallbackText);
+        onTranscribeSuccess?.(text);
+        setTranscribedFeedback('Voice transcribed into text below! You can review or edit it, then tap Analyze.');
+      } else {
+        // Analyze directly
+        const result = await api.analyzeVoice(uri, fallbackText);
+        if (result.transcribed_text) {
+          onTranscribeSuccess?.(result.transcribed_text);
+        }
+        onAnalysisSuccess?.(result);
       }
-      onAnalysisSuccess?.(result);
     } catch (err: any) {
       console.error('Failed to process voice recording:', err);
       const msg = err?.message || 'Failed to process voice recording.';
-      Alert.alert('Voice Analysis Error', msg);
+      Alert.alert('Voice Processing Error', msg);
       onError?.(msg);
     } finally {
       setIsProcessing(false);
@@ -175,11 +179,9 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    if (recorder.isRecording) {
-      try {
-        await recorder.stop();
-      } catch (_) {}
-    }
+    try {
+      await recorder.stop();
+    } catch (_) {}
     setIsRecording(false);
     setRecordingDuration(0);
   };
@@ -195,7 +197,7 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
       {isProcessing ? (
         <View style={styles.processingContainer}>
           <ActivityIndicator size="small" color={Colors.primary[600]} />
-          <Text style={styles.processingText}>Transcribing & analyzing audio with AI...</Text>
+          <Text style={styles.processingText}>Transcribing speech with AI...</Text>
         </View>
       ) : isRecording ? (
         <View style={styles.recordingContainer}>
@@ -210,7 +212,7 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
             </Animated.View>
             <View style={styles.timerBlock}>
               <Text style={styles.recordingTimer}>{formatDuration(recordingDuration)}</Text>
-              <Text style={styles.recordingStatusLabel}>Listening... Speak clearly</Text>
+              <Text style={styles.recordingStatusLabel}>Listening... Speak clearly (tap Done when finished)</Text>
             </View>
           </View>
 
@@ -226,28 +228,37 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
 
             <Pressable
               style={styles.stopBtn}
-              onPress={stopRecordingAndAnalyze}
+              onPress={stopRecording}
               hitSlop={8}
             >
               <Ionicons name="checkmark-circle" size={20} color={Colors.neutral[0]} />
-              <Text style={styles.stopBtnText}>Done (Analyze)</Text>
+              <Text style={styles.stopBtnText}>Done</Text>
             </Pressable>
           </View>
         </View>
       ) : (
-        <Pressable
-          style={[styles.micButton, disabled && styles.micButtonDisabled]}
-          onPress={startRecording}
-          disabled={disabled}
-        >
-          <View style={styles.micIconWrapper}>
-            <Ionicons name="mic" size={18} color={Colors.primary[600]} />
-          </View>
-          <View style={styles.micTextWrapper}>
-            <Text style={styles.micButtonTitle}>Tap to Speak</Text>
-            <Text style={styles.micButtonSubtitle}>Describe your issue in your own words</Text>
-          </View>
-        </Pressable>
+        <View>
+          <Pressable
+            style={[styles.micButton, disabled && styles.micButtonDisabled]}
+            onPress={startRecording}
+            disabled={disabled}
+          >
+            <View style={styles.micIconWrapper}>
+              <Ionicons name="mic" size={18} color={Colors.primary[600]} />
+            </View>
+            <View style={styles.micTextWrapper}>
+              <Text style={styles.micButtonTitle}>Tap to Speak</Text>
+              <Text style={styles.micButtonSubtitle}>Speak your problem — words will transcribe below</Text>
+            </View>
+          </Pressable>
+
+          {transcribedFeedback ? (
+            <View style={styles.feedbackBanner}>
+              <Ionicons name="checkmark-circle" size={16} color={Colors.success[600]} />
+              <Text style={styles.feedbackText}>{transcribedFeedback}</Text>
+            </View>
+          ) : null}
+        </View>
       )}
     </View>
   );
@@ -380,5 +391,23 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.primary[700],
     fontWeight: '600',
+  },
+  feedbackBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    backgroundColor: Colors.success[50],
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.xs,
+    borderWidth: 1,
+    borderColor: Colors.success[200],
+  },
+  feedbackText: {
+    fontSize: FontSize.xs,
+    color: Colors.success[700],
+    flex: 1,
+    fontWeight: '500',
   },
 });

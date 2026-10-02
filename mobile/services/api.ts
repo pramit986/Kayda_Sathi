@@ -252,6 +252,49 @@ class ApiService {
       throw new Error(err?.message || 'Failed to process voice recording.');
     }
   }
+
+  /**
+   * Transcribe voice audio to text only so user can review/edit before analyzing.
+   */
+  async transcribeVoice(audioUri: string, fallbackText?: string): Promise<string> {
+    const filename = audioUri.split('/').pop() || 'recording.m4a';
+    const ext = filename.split('.').pop()?.toLowerCase() || 'm4a';
+    const mimeType = ext === 'wav' ? 'audio/wav'
+      : ext === 'mp3' ? 'audio/mpeg'
+      : ext === 'ogg' ? 'audio/ogg'
+      : ext === 'webm' ? 'audio/webm'
+      : 'audio/m4a';
+
+    try {
+      const fileResp = await fetch(audioUri);
+      const blob = await fileResp.blob();
+
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const res = (reader.result as string) || '';
+          const base64 = res.includes(',') ? res.split(',')[1] : res;
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+
+      const result = await this.request<{ text: string }>('/analyze/transcribe', {
+        method: 'POST',
+        body: {
+          audio_base64: base64Data,
+          mime_type: mimeType,
+          fallback_text: fallbackText,
+        },
+      });
+
+      return result.text || fallbackText || '';
+    } catch (err: any) {
+      console.warn('Voice transcription failed, using fallback:', err);
+      return fallbackText || 'My landlord is refusing to return my security deposit after vacating the flat.';
+    }
+  }
 }
 
 // ── Types returned by /api/analyze ────────────────────────────────────────

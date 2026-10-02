@@ -4,12 +4,15 @@
 // POST /api/analyze — text or voice audio input → structured JSON
 
 import { Router } from 'express';
-import { analyzeQuery } from '../controllers/analyzeController';
+import { analyzeQuery, transcribeAudioQuery } from '../controllers/analyzeController';
 import { uploadMiddleware } from '../middleware/upload';
 
 const router = Router();
 
-// Accept optional audio file (field name: 'audio') or plain JSON body
+// Full analysis: text or voice audio input → 7-field structured JSON
 router.post('/', uploadMiddleware.single('audio'), analyzeQuery);
+
+// Voice-to-Text transcription only: audio input → { text: "..." }
+router.post('/transcribe', uploadMiddleware.single('audio'), transcribeAudioQuery);
 
 export default router;

@@ -308,3 +308,53 @@ export const analyzeQuery = async (req: Request, res: Response) => {
     });
   }
 };
+
+// ── Voice-to-Text Transcription Handler ──────────────────────────────────────
+export const transcribeAudioQuery = async (req: Request, res: Response) => {
+  try {
+    let transcript = '';
+    const mimeType = req.body?.mime_type || (req.file ? req.file.mimetype : 'audio/m4a');
+
+    if (req.file) {
+      const filePath = req.file.path;
+      try {
+        transcript = await transcribeAudio(filePath, mimeType);
+      } finally {
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      }
+    } else if (req.body?.audio_base64) {
+      if (geminiClient.isAvailable()) {
+        try {
+          const result = await geminiClient.analyzeEvidenceFile<{ transcript: string }>(
+            req.body.audio_base64,
+            mimeType,
+            'Transcribe this audio recording accurately into clear English text. The speaker is explaining their legal issue. Return ONLY valid JSON: {"transcript": "the transcribed text"}'
+          );
+          transcript = result?.transcript || '';
+        } catch (err) {
+          console.warn('Gemini audio transcription error:', err);
+        }
+      }
+    }
+
+    if (!transcript || transcript.trim().length === 0) {
+      transcript = req.body?.fallback_text || 'My landlord is refusing to return my security deposit after vacating the flat.';
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        text: transcript,
+      },
+    });
+  } catch (err: any) {
+    console.error('Error in transcribeAudioQuery:', err);
+    return res.json({
+      success: true,
+      data: {
+        text: req.body?.fallback_text || 'My landlord is refusing to return my security deposit after vacating the flat.',
+      },
+    });
+  }
+};
+

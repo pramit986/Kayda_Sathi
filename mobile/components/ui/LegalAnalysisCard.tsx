@@ -22,6 +22,7 @@ import {
   Alert,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import * as Speech from 'expo-speech';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Spacing, BorderRadius, CATEGORIES } from '@/constants';
 import { Card, Button, StatusBadge, ProgressBar } from '@/components/ui';
@@ -44,6 +45,24 @@ export const LegalAnalysisCard: React.FC<LegalAnalysisCardProps> = ({
   // Local state for editable complaint draft
   const [draftText, setDraftText] = useState(analysis.complaint_draft || '');
   const [copied, setCopied] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const handleToggleSpeech = () => {
+    if (isSpeaking) {
+      Speech.stop();
+      setIsSpeaking(false);
+    } else {
+      const speechSummary = `Legal assessment for ${analysis.category} Law. Identified issue: ${analysis.identified_issue}. Primary legal rights: ${analysis.legal_rights.slice(0, 2).join('. ')}. Recommended immediate step: ${analysis.action_steps[0]?.description || ''}`;
+      setIsSpeaking(true);
+      Speech.speak(speechSummary, {
+        language: 'en-IN',
+        pitch: 1.0,
+        rate: 0.92,
+        onDone: () => setIsSpeaking(false),
+        onError: () => setIsSpeaking(false),
+      });
+    }
+  };
 
   // Category styling lookup
   const categoryConfig = CATEGORIES.find(
@@ -116,7 +135,23 @@ export const LegalAnalysisCard: React.FC<LegalAnalysisCardProps> = ({
               {analysis.category.toUpperCase()} LAW
             </Text>
           </View>
-          <StatusBadge label="AI ANALYZED" variant="success" size="sm" />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+            <Pressable
+              style={[styles.ttsButton, isSpeaking && styles.ttsButtonActive]}
+              onPress={handleToggleSpeech}
+              hitSlop={8}
+            >
+              <Ionicons
+                name={isSpeaking ? 'stop-circle' : 'volume-high-outline'}
+                size={15}
+                color={isSpeaking ? Colors.error[600] : Colors.primary[600]}
+              />
+              <Text style={[styles.ttsButtonText, isSpeaking && styles.ttsButtonTextActive]}>
+                {isSpeaking ? 'Stop' : 'Listen'}
+              </Text>
+            </Pressable>
+            <StatusBadge label="AI ANALYZED" variant="success" size="sm" />
+          </View>
         </View>
 
         <Text style={styles.issueHeading}>Identified Legal Issue</Text>
@@ -551,5 +586,28 @@ const styles = StyleSheet.create({
   bottomActions: {
     marginTop: Spacing.md,
     gap: Spacing.xs,
+  },
+  ttsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.primary[50],
+    borderWidth: 1,
+    borderColor: Colors.primary[200],
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.full,
+  },
+  ttsButtonActive: {
+    backgroundColor: Colors.error[50],
+    borderColor: Colors.error[200],
+  },
+  ttsButtonText: {
+    fontSize: FontSize.xs,
+    fontWeight: '600',
+    color: Colors.primary[600],
+  },
+  ttsButtonTextActive: {
+    color: Colors.error[600],
   },
 });

@@ -205,13 +205,7 @@ export default function NewCaseScreen() {
 
               {/* Voice Input Section */}
               <VoiceInput
-                onAnalysisSuccess={(analysis) => {
-                  setAnalysisResult(analysis);
-                  if (analysis.transcribed_text) {
-                    setDescription(analysis.transcribed_text);
-                  }
-                  setStep('analysis');
-                }}
+                mode="transcribe"
                 onTranscribeSuccess={(txt) => {
                   setDescription(txt);
                 }}
