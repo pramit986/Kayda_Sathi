@@ -73,7 +73,7 @@ export default function NewCaseScreen() {
       const issueText = description.trim() || analysisResult?.identified_issue || 'Legal dispute';
       const result = await CaseStore.createCase({
         description: issueText,
-        inputType: 'TEXT',
+        inputType: analysisResult?.transcribed_text ? 'VOICE' : 'TEXT',
       });
 
       setCreatedCase(result.case);

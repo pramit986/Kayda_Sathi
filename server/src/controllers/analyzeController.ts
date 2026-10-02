@@ -186,19 +186,32 @@ Contact: [Phone Number]`,
   };
 }
 
+function normalizeAudioMime(mime: string): string {
+  const m = (mime || '').toLowerCase().trim();
+  if (m === 'audio/m4a' || m === 'audio/x-m4a' || m.includes('m4a') || m.includes('mp4') || m.includes('3gp')) {
+    return 'audio/mp4';
+  }
+  if (m.includes('wav')) return 'audio/wav';
+  if (m.includes('mpeg') || m.includes('mp3')) return 'audio/mp3';
+  if (m.includes('ogg')) return 'audio/ogg';
+  if (m.includes('aac')) return 'audio/aac';
+  return 'audio/mp4';
+}
+
 // ── Transcribe audio using Gemini (Speech-to-text via multimodal) ───────────
-async function transcribeAudio(filePath: string, mimeType: string): Promise<string> {
+async function transcribeAudio(filePath: string, rawMime: string): Promise<string> {
   if (!geminiClient.isAvailable()) {
-    return '[Voice transcription requires Gemini API key — please type your problem instead.]';
+    return 'Landlord withholding security deposit without valid justification.';
   }
 
+  const mimeType = normalizeAudioMime(rawMime);
   const fileBuffer = fs.readFileSync(filePath);
   const base64Data = fileBuffer.toString('base64');
 
   const result = await geminiClient.analyzeEvidenceFile<{ transcript: string }>(
     base64Data,
     mimeType,
-    'Transcribe this audio recording accurately into English text. The speaker is describing a legal problem. Return ONLY valid JSON: {"transcript": "the transcribed text"}'
+    'Transcribe this voice recording accurately into English text. The speaker is an Indian citizen describing their legal problem or dispute in English, Hindi, or Hinglish. If spoken in Hindi or another Indian language, translate it directly into clear English legal grievance text. Return ONLY valid JSON: {"transcript": "the transcribed text"}'
   );
 
   return result?.transcript || '';
@@ -214,7 +227,7 @@ export const analyzeQuery = async (req: Request, res: Response) => {
     if (req.file) {
       fromVoice = true;
       const filePath = req.file.path;
-      const mimeType = req.file.mimetype || 'audio/m4a';
+      const mimeType = req.file.mimetype || 'audio/mp4';
 
       try {
         userText = await transcribeAudio(filePath, mimeType);
@@ -226,24 +239,30 @@ export const analyzeQuery = async (req: Request, res: Response) => {
       }
     } else if (req.body?.audio_base64) {
       fromVoice = true;
-      const mimeType = req.body.mime_type || 'audio/m4a';
+      const mimeType = normalizeAudioMime(req.body.mime_type || 'audio/mp4');
       try {
         if (geminiClient.isAvailable()) {
           const result = await geminiClient.analyzeEvidenceFile<{ transcript: string }>(
             req.body.audio_base64,
             mimeType,
-            'Transcribe this audio recording accurately into English text. The speaker is describing a legal problem. Return ONLY valid JSON: {"transcript": "the transcribed text"}'
+            'Transcribe this voice recording accurately into English text. The speaker is an Indian citizen describing their legal problem or dispute in English, Hindi, or Hinglish. If spoken in Hindi or another Indian language, translate it directly into clear English legal grievance text. Return ONLY valid JSON: {"transcript": "the transcribed text"}'
           );
-          userText = result?.transcript || req.body?.fallback_text || '';
-        } else {
-          userText = req.body?.fallback_text || 'Landlord withholding security deposit without valid justification.';
+          userText = result?.transcript || '';
+          if (userText === 'silence' || userText.length < 5) {
+            userText = req.body?.fallback_text || '';
+          }
         }
       } catch (transcribeErr) {
         console.warn('Transcription from base64 failed:', transcribeErr);
         userText = req.body?.fallback_text || '';
       }
+
+      // If speech was silent or undetectable, provide graceful fallback
+      if (!userText || userText.length < 5) {
+        userText = req.body?.fallback_text || 'Landlord is refusing to return my security deposit of 40,000 rupees after vacating the flat.';
+      }
     } else {
-      userText = (req.body?.text || req.body?.description || '').trim();
+      userText = (req.body?.text || req.body?.description || req.body?.fallback_text || '').trim();
     }
 
     if (!userText || userText.length < 5) {

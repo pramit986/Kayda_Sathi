@@ -217,7 +217,7 @@ class ApiService {
       : ext === 'mp3' ? 'audio/mpeg'
       : ext === 'ogg' ? 'audio/ogg'
       : ext === 'webm' ? 'audio/webm'
-      : 'audio/m4a';
+      : 'audio/mp4';
 
     try {
       // Read the recorded file directly as a Blob
