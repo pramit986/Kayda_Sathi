@@ -54,6 +54,7 @@ export default function EvidenceScreen() {
   // Modal states
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedEvidenceDetail, setSelectedEvidenceDetail] = useState<Evidence | null>(null);
+  const [isNoDocsModalOpen, setIsNoDocsModalOpen] = useState(false);
 
   // Form states
   const [targetCaseId, setTargetCaseId] = useState<string>(cases[0]?.id || '');
@@ -225,6 +226,25 @@ export default function EvidenceScreen() {
               <View style={[styles.progressFill, { width: `${completeness}%` }]} />
             </View>
           </Card>
+        </View>
+
+        {/* No Documents Banner Button */}
+        <View style={styles.section}>
+          <Pressable
+            style={styles.noDocsBanner}
+            onPress={() => setIsNoDocsModalOpen(true)}
+          >
+            <View style={styles.noDocsBannerIcon}>
+              <Ionicons name="help-buoy-outline" size={20} color={Colors.warning[700]} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.noDocsBannerTitle}>Don't Have Paper Documents?</Text>
+              <Text style={styles.noDocsBannerSubtitle}>
+                Tap here for 5 statutory ways to build proof under BSA 2023 without paper receipts
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={Colors.warning[700]} />
+          </Pressable>
         </View>
 
         {/* Collected Evidence Section */}
@@ -514,6 +534,135 @@ export default function EvidenceScreen() {
               )}
             </ScrollView>
           )}
+        </SafeAreaView>
+      </Modal>
+
+      {/* ======================================================= */}
+      {/* No Documents Present - Legal Guidance Modal */}
+      {/* ======================================================= */}
+      <Modal
+        visible={isNoDocsModalOpen}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setIsNoDocsModalOpen(false)}
+      >
+        <SafeAreaView style={styles.modalSafe}>
+          <View style={styles.modalHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.modalTitle}>No Documents? Legal Action Plan</Text>
+              <Text style={styles.noDocsModalSub}>
+                How to prove your case without formal paper receipts (BSA 2023 / BNSS)
+              </Text>
+            </View>
+            <Pressable onPress={() => setIsNoDocsModalOpen(false)} hitSlop={10}>
+              <Ionicons name="close" size={24} color={Colors.neutral[700]} />
+            </Pressable>
+          </View>
+
+          <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalScrollContent}>
+            <Card variant="outlined" style={styles.noDocsInfoCard}>
+              <Ionicons name="information-circle" size={20} color={Colors.info[600]} />
+              <Text style={styles.noDocsInfoText}>
+                Under Indian Evidence Act & Bharatiya Sakshya Adhiniyam (BSA 2023), oral testimony, digital transactions, chats, and third-party witness affidavits are fully admissible legal evidence.
+              </Text>
+            </Card>
+
+            <SectionHeader title="5 Steps to Recover & Create Admissible Proof" />
+
+            {/* Step 1 */}
+            <Card variant="outlined" style={styles.stepCard}>
+              <View style={styles.stepBadge}>
+                <Text style={styles.stepBadgeText}>1</Text>
+              </View>
+              <View style={styles.stepBody}>
+                <Text style={styles.stepTitle}>Digital Banking & Transaction Trails</Text>
+                <Text style={styles.stepDesc}>
+                  Download bank statements, UPI history (GPay, PhonePe, Paytm), or SMS alerts for all transfers. Under BSA 2023, digital bank logs carry strong evidentiary value even without cash receipts.
+                </Text>
+              </View>
+            </Card>
+
+            {/* Step 2 */}
+            <Card variant="outlined" style={styles.stepCard}>
+              <View style={styles.stepBadge}>
+                <Text style={styles.stepBadgeText}>2</Text>
+              </View>
+              <View style={styles.stepBody}>
+                <Text style={styles.stepTitle}>Export Chat Logs & SMS</Text>
+                <Text style={styles.stepDesc}>
+                  Export WhatsApp chat history (with timestamps) or call logs showing communication regarding rent, deposit, or promises made.
+                </Text>
+              </View>
+            </Card>
+
+            {/* Step 3 */}
+            <Card variant="outlined" style={styles.stepCard}>
+              <View style={styles.stepBadge}>
+                <Text style={styles.stepBadgeText}>3</Text>
+              </View>
+              <View style={styles.stepBody}>
+                <Text style={styles.stepTitle}>Witness Statements & Affidavits</Text>
+                <Text style={styles.stepDesc}>
+                  Obtain written statements or signed affidavits from co-tenants, neighbors, building security, or colleagues who witnessed cash transactions or conversations (BNSS Sec 180).
+                </Text>
+              </View>
+            </Card>
+
+            {/* Step 4 */}
+            <Card variant="outlined" style={styles.stepCard}>
+              <View style={styles.stepBadge}>
+                <Text style={styles.stepBadgeText}>4</Text>
+              </View>
+              <View style={styles.stepBody}>
+                <Text style={styles.stepTitle}>File Sworn Self-Affidavit</Text>
+                <Text style={styles.stepDesc}>
+                  Draft a formal notarized affidavit detailing the exact dates, oral agreement terms, and event sequence. AI Kayda Sathi can format this for court presentation.
+                </Text>
+              </View>
+            </Card>
+
+            {/* Step 5 */}
+            <Card variant="outlined" style={styles.stepCard}>
+              <View style={styles.stepBadge}>
+                <Text style={styles.stepBadgeText}>5</Text>
+              </View>
+              <View style={styles.stepBody}>
+                <Text style={styles.stepTitle}>Public Portal Complaint / RTI</Text>
+                <Text style={styles.stepDesc}>
+                  Lodge an online complaint on National Consumer Helpline (1915), Cyber Crime Portal, or local police station (Non-Cognizable Report) to create an official statutory record.
+                </Text>
+              </View>
+            </Card>
+
+            {/* Action Buttons */}
+            <View style={styles.noDocsActionCol}>
+              <Button
+                title="Log Oral Agreement / Self-Statement"
+                onPress={() => {
+                  setIsNoDocsModalOpen(false);
+                  setTitle('Sworn Self-Statement / Oral Agreement Log');
+                  setType('TEXT_NOTE');
+                  setIsUploadModalOpen(true);
+                }}
+                variant="primary"
+                icon="create-outline"
+                style={{ marginBottom: Spacing.xs }}
+              />
+              <Button
+                title="Log Witness Details / Statement"
+                onPress={() => {
+                  setIsNoDocsModalOpen(false);
+                  setTitle('Witness Statement / Contact Log');
+                  setType('TEXT_NOTE');
+                  setIsUploadModalOpen(true);
+                }}
+                variant="secondary"
+                icon="people-outline"
+              />
+            </View>
+
+            <View style={{ height: Spacing['3xl'] }} />
+          </ScrollView>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -920,5 +1069,95 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.primary[800],
     flex: 1,
+  },
+
+  // No Docs Styles
+  noDocsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    backgroundColor: '#FFFBEB',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  noDocsBannerIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FEF3C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noDocsBannerTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  noDocsBannerSubtitle: {
+    fontSize: FontSize.xs,
+    color: '#B45309',
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  noDocsModalSub: {
+    fontSize: FontSize.xs,
+    color: Colors.neutral[500],
+    marginTop: 2,
+  },
+  noDocsInfoCard: {
+    backgroundColor: Colors.info[50],
+    borderColor: Colors.info[200],
+    padding: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  noDocsInfoText: {
+    fontSize: FontSize.xs,
+    color: Colors.info[700],
+    flex: 1,
+    lineHeight: 18,
+  },
+  stepCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+    backgroundColor: Colors.neutral[0],
+  },
+  stepBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: Colors.primary[600],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepBadgeText: {
+    fontSize: FontSize.xs,
+    fontWeight: '700',
+    color: Colors.neutral[0],
+  },
+  stepBody: {
+    flex: 1,
+  },
+  stepTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+    color: Colors.neutral[900],
+    marginBottom: 4,
+  },
+  stepDesc: {
+    fontSize: FontSize.xs,
+    color: Colors.neutral[600],
+    lineHeight: 18,
+  },
+  noDocsActionCol: {
+    marginTop: Spacing.md,
+    gap: Spacing.sm,
   },
 });
