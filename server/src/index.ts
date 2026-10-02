@@ -10,6 +10,7 @@ import path from 'path';
 import { config, hasGeminiKey, hasFirebaseAdmin } from './config/env';
 import caseRoutes from './routes/caseRoutes';
 import evidenceRoutes from './routes/evidenceRoutes';
+import analyzeRoutes from './routes/analyzeRoutes';
 
 const app = express();
 const PORT = config.port;
@@ -46,6 +47,7 @@ app.get('/api/health', (_req, res) => {
 // Real API Routes for Phases 2, 3, 4
 app.use('/api/cases', caseRoutes);
 app.use('/api/evidence', evidenceRoutes);
+app.use('/api/analyze', analyzeRoutes);
 
 // 404 handler
 app.use((_req, res) => {
@@ -64,7 +66,8 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`\n🏛️  Kayda Sathi API running on port ${PORT}`);
     console.log(`   Health: http://localhost:${PORT}/api/health`);
     console.log(`   Cases: http://localhost:${PORT}/api/cases`);
-    console.log(`   Evidence: http://localhost:${PORT}/api/evidence\n`);
+    console.log(`   Evidence: http://localhost:${PORT}/api/evidence`);
+    console.log(`   Analyze: http://localhost:${PORT}/api/analyze\n`);
   });
 }
 

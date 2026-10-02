@@ -17,3 +17,4 @@ export {
   ErrorState,
   EmptyState,
 } from './StateViews';
+export { LegalAnalysisCard } from './LegalAnalysisCard';

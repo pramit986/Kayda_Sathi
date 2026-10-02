@@ -19,8 +19,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Spacing, BorderRadius, CATEGORIES } from '@/constants';
-import { Button, Card, StatusBadge } from '@/components/ui';
+import { Button, Card, StatusBadge, LegalAnalysisCard } from '@/components/ui';
+import { VoiceInput } from '@/components/VoiceInput';
 import { CaseStore } from '@/store/caseStore';
+import { api, LegalAnalysis } from '@/services/api';
 import { IntakeQuestion, IntakeAnswer, Case } from '@/types';
 
 const SAMPLE_SCENARIOS = [
@@ -41,7 +43,8 @@ const SAMPLE_SCENARIOS = [
 export default function NewCaseScreen() {
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'describe' | 'intake'>('describe');
+  const [step, setStep] = useState<'describe' | 'analysis' | 'intake'>('describe');
+  const [analysisResult, setAnalysisResult] = useState<LegalAnalysis | null>(null);
   const [createdCase, setCreatedCase] = useState<Case | null>(null);
   const [intakeQuestions, setIntakeQuestions] = useState<IntakeQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -54,8 +57,22 @@ export default function NewCaseScreen() {
 
     setLoading(true);
     try {
+      const result = await api.analyzeText(description.trim());
+      setAnalysisResult(result);
+      setStep('analysis');
+    } catch (err: any) {
+      Alert.alert('Analysis Error', err?.message || 'Could not analyze problem. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProceedToCase = async () => {
+    setLoading(true);
+    try {
+      const issueText = description.trim() || analysisResult?.identified_issue || 'Legal dispute';
       const result = await CaseStore.createCase({
-        description: description.trim(),
+        description: issueText,
         inputType: 'TEXT',
       });
 
@@ -63,14 +80,21 @@ export default function NewCaseScreen() {
       setIntakeQuestions(result.intakeQuestions || []);
       // Initialize default answers
       const initialAnswers: Record<string, string> = {};
-      (result.intakeQuestions || []).forEach(q => {
+      (result.intakeQuestions || []).forEach((q) => {
         initialAnswers[q.questionId] = q.options ? q.options[0] : '';
       });
       setAnswers(initialAnswers);
 
-      setStep('intake');
+      if (result.intakeQuestions && result.intakeQuestions.length > 0) {
+        setStep('intake');
+      } else {
+        router.replace({
+          pathname: '/case/[id]',
+          params: { id: result.case.id },
+        });
+      }
     } catch (err: any) {
-      Alert.alert('Analysis Error', err?.message || 'Could not analyze problem. Please try again.');
+      Alert.alert('Case Creation Error', err?.message || 'Could not save case dossier.');
     } finally {
       setLoading(false);
     }
@@ -115,11 +139,30 @@ export default function NewCaseScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Ionicons name="close" size={24} color={Colors.neutral[600]} />
+          <Pressable
+            onPress={() => {
+              if (step === 'analysis') {
+                setStep('describe');
+              } else if (step === 'intake') {
+                setStep('analysis');
+              } else {
+                router.back();
+              }
+            }}
+            hitSlop={12}
+          >
+            <Ionicons
+              name={step === 'describe' ? 'close' : 'arrow-back'}
+              size={24}
+              color={Colors.neutral[600]}
+            />
           </Pressable>
           <Text style={styles.headerTitle}>
-            {step === 'describe' ? 'Describe Your Problem' : 'Clarifying Details'}
+            {step === 'describe'
+              ? 'Describe Your Problem'
+              : step === 'analysis'
+              ? 'AI Legal Assessment'
+              : 'Clarifying Details'}
           </Text>
           <View style={{ width: 24 }} />
         </View>
@@ -160,6 +203,28 @@ export default function NewCaseScreen() {
                 </ScrollView>
               </View>
 
+              {/* Voice Input Section */}
+              <VoiceInput
+                onAnalysisSuccess={(analysis) => {
+                  setAnalysisResult(analysis);
+                  if (analysis.transcribed_text) {
+                    setDescription(analysis.transcribed_text);
+                  }
+                  setStep('analysis');
+                }}
+                onTranscribeSuccess={(txt) => {
+                  setDescription(txt);
+                }}
+                fallbackText={description}
+                disabled={loading}
+              />
+
+              <View style={styles.orDivider}>
+                <View style={styles.orDividerLine} />
+                <Text style={styles.orDividerText}>OR TYPE YOUR PROBLEM</Text>
+                <View style={styles.orDividerLine} />
+              </View>
+
               {/* Description Input */}
               <View style={styles.inputContainer}>
                 <TextInput
@@ -180,8 +245,8 @@ export default function NewCaseScreen() {
                       setDescription('Landlord withheld 40000 rupees security deposit despite 15 days notice and clean handover.');
                     }}
                   >
-                    <Ionicons name="mic-outline" size={18} color={Colors.primary[500]} />
-                    <Text style={styles.voiceText}>Sample Voice</Text>
+                    <Ionicons name="sparkles" size={16} color={Colors.primary[500]} />
+                    <Text style={styles.voiceText}>Fill Sample</Text>
                   </Pressable>
                 </View>
               </View>
@@ -221,6 +286,15 @@ export default function NewCaseScreen() {
                 ))}
               </View>
             </>
+          ) : step === 'analysis' && analysisResult ? (
+            <LegalAnalysisCard
+              analysis={analysisResult}
+              onProceedToCase={handleProceedToCase}
+              onReset={() => {
+                setAnalysisResult(null);
+                setStep('describe');
+              }}
+            />
           ) : (
             <>
               {/* Step 2: Intake Questions */}
@@ -475,6 +549,23 @@ const styles = StyleSheet.create({
     color: Colors.primary[700],
     flex: 1,
     lineHeight: 18,
+  },
+  orDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: Spacing.sm,
+  },
+  orDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.neutral[200],
+  },
+  orDividerText: {
+    fontSize: FontSize.xs,
+    fontWeight: '700',
+    color: Colors.neutral[400],
+    marginHorizontal: Spacing.md,
+    letterSpacing: 0.5,
   },
   divider: {
     flexDirection: 'row',

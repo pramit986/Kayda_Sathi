@@ -189,6 +189,93 @@ class ApiService {
     const result = await response.json();
     return result.data;
   }
+
+  // -------------------------------------------------------------
+  // Legal Analysis (Voice + Text)  — /api/analyze
+  // -------------------------------------------------------------
+  /**
+   * Analyze a legal problem from plain text.
+   * Returns structured { category, identified_issue, legal_rights, action_steps,
+   *                      required_documents, appropriate_authority, complaint_draft }
+   */
+  async analyzeText(text: string): Promise<LegalAnalysis> {
+    return this.request<LegalAnalysis>('/analyze', {
+      method: 'POST',
+      body: { text },
+    });
+  }
+
+  /**
+   * Send a voice recording (URI from expo-av) to the backend for
+   * transcription + legal analysis. Falls back to fallback_text if
+   * transcription fails on the server side.
+   */
+  async analyzeVoice(audioUri: string, fallbackText?: string): Promise<LegalAnalysis & { transcribed_text?: string }> {
+    const formData = new FormData();
+
+    // Extract filename from URI
+    const filename = audioUri.split('/').pop() || 'recording.m4a';
+    const ext = filename.split('.').pop()?.toLowerCase() || 'm4a';
+    const mimeType = ext === 'wav' ? 'audio/wav'
+      : ext === 'mp3' ? 'audio/mpeg'
+      : ext === 'ogg' ? 'audio/ogg'
+      : ext === 'webm' ? 'audio/webm'
+      : 'audio/m4a';
+
+    // React Native FormData accepts { uri, type, name }
+    (formData as any).append('audio', {
+      uri: audioUri,
+      type: mimeType,
+      name: filename,
+    });
+
+    if (fallbackText) {
+      formData.append('fallback_text', fallbackText);
+    }
+
+    const response = await fetch(`${this.baseUrl}/analyze`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        Accept: 'application/json',
+        ...(this.authToken ? { Authorization: `Bearer ${this.authToken}` } : {}),
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Voice analysis failed: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.data;
+  }
+}
+
+// ── Types returned by /api/analyze ────────────────────────────────────────
+export interface LegalAnalysisActionStep {
+  step: number;
+  title: string;
+  description: string;
+  deadline?: string;
+}
+
+export interface LegalAnalysisAuthority {
+  name: string;
+  portal: string;
+  jurisdiction: string;
+}
+
+export interface LegalAnalysis {
+  category: 'Rental' | 'Employment' | 'Consumer' | 'Cyber Fraud';
+  identified_issue: string;
+  legal_rights: string[];
+  action_steps: LegalAnalysisActionStep[];
+  required_documents: string[];
+  appropriate_authority: LegalAnalysisAuthority;
+  complaint_draft: string;
+  transcribed_text?: string;
 }
 
 export const api = new ApiService(API_BASE);
+

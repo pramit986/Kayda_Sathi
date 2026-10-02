@@ -34,6 +34,12 @@
           "resizeMode": "contain",
           "backgroundColor": "#1A3A8F"
         }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Kayda Sathi needs microphone access to let you describe your legal problem by voice."
+        }
       ]
     ],
     "experiments": {
