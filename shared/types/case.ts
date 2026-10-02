@@ -4,7 +4,7 @@
 
 export type CaseStatus = 'ACTIVE' | 'ACTION_REQUIRED' | 'RESOLVED' | 'ARCHIVED';
 
-export type FactStatus = 'VERIFIED' | 'USER_STATED' | 'AI_INFERRED' | 'UNKNOWN';
+export type FactStatus = 'VERIFIED' | 'USER_STATED' | 'LEGAL_SOURCE' | 'AI_INFERRED' | 'UNKNOWN';
 
 export type ActionItemStatus = 'TODO' | 'IN_PROGRESS' | 'DONE';
 

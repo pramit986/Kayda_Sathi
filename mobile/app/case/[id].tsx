@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -21,7 +22,8 @@ import { Card, StatusBadge, ProgressBar, Button, type BadgeVariant } from '@/com
 import { useCase, useEvidence } from '@/store/caseStore';
 import { DEMO_CASE, DEMO_CONTRADICTIONS } from '@/store/demoData';
 import { getCategoryById } from '@/constants';
-import { CaseDocument } from '@/types';
+import { getAuthoritativeLegalSource } from '@/constants/legalSources';
+import { CaseDocument, LegalSourceReference } from '@/types';
 
 type TabKey = 'overview' | 'timeline' | 'evidence' | 'actions' | 'documents';
 
@@ -46,6 +48,9 @@ export default function CaseDetailScreen() {
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
   const [draftingType, setDraftingType] = useState<CaseDocument['type'] | null>(null);
   const [selectedDoc, setSelectedDoc] = useState<CaseDocument | null>(null);
+  const [selectedSource, setSelectedSource] = useState<LegalSourceReference | null>(null);
+  const [timelineFilter, setTimelineFilter] = useState<'ALL' | 'KEY'>('KEY');
+  const [showSmartSummaryModal, setShowSmartSummaryModal] = useState<boolean>(false);
 
   const caseId = id || DEMO_CASE.id;
   const { caseData, toggleAction, generateDocument } = useCase(caseId);
