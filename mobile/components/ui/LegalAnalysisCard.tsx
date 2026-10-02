@@ -50,19 +50,33 @@ export const LegalAnalysisCard: React.FC<LegalAnalysisCardProps> = ({
   const [copied, setCopied] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
 
-  const handleToggleSpeech = () => {
+  // Stop speaking if component unmounts
+  React.useEffect(() => {
+    return () => {
+      Speech.stop();
+    };
+  }, []);
+
+  const handleToggleSpeech = (customText?: string) => {
     if (isSpeaking) {
       Speech.stop();
       setIsSpeaking(false);
     } else {
-      const speechSummary = `Legal assessment for ${analysis.category} Law. Identified issue: ${analysis.identified_issue}. Primary legal rights: ${analysis.legal_rights.slice(0, 2).join('. ')}. Recommended immediate step: ${analysis.action_steps[0]?.description || ''}`;
+      const speechSummary =
+        customText ||
+        `Legal assessment for ${analysis.category} Law. Identified issue: ${analysis.identified_issue}. Primary legal rights: ${analysis.legal_rights?.slice(0, 2).join('. ') || ''}. Recommended immediate step: ${analysis.action_steps?.[0]?.description || ''}`;
       setIsSpeaking(true);
       Speech.speak(speechSummary, {
-        language: 'en-IN',
         pitch: 1.0,
-        rate: 0.92,
+        rate: 0.95,
         onDone: () => setIsSpeaking(false),
-        onError: () => setIsSpeaking(false),
+        onError: (err) => {
+          console.warn('TTS error, retrying without language option:', err);
+          Speech.speak(speechSummary, {
+            onDone: () => setIsSpeaking(false),
+            onError: () => setIsSpeaking(false),
+          });
+        },
       });
     }
   };
@@ -141,7 +155,7 @@ export const LegalAnalysisCard: React.FC<LegalAnalysisCardProps> = ({
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
             <Pressable
               style={[styles.ttsButton, isSpeaking && styles.ttsButtonActive]}
-              onPress={handleToggleSpeech}
+              onPress={() => handleToggleSpeech()}
               hitSlop={8}
             >
               <Ionicons
@@ -323,7 +337,15 @@ export const LegalAnalysisCard: React.FC<LegalAnalysisCardProps> = ({
 
         <View style={styles.draftActionsRow}>
           <Button
-            title={copied ? 'Copied!' : 'Copy Draft'}
+            title={isSpeaking ? 'Stop' : 'Listen'}
+            onPress={() => handleToggleSpeech(draftText)}
+            variant="outline"
+            size="sm"
+            icon={isSpeaking ? 'stop-circle' : 'volume-high-outline'}
+            style={styles.draftActionBtn}
+          />
+          <Button
+            title={copied ? 'Copied!' : 'Copy'}
             onPress={handleCopyDraft}
             variant={copied ? 'primary' : 'outline'}
             size="sm"
