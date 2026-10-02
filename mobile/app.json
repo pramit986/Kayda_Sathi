@@ -36,7 +36,7 @@
         }
       ],
       [
-        "expo-av",
+        "expo-audio",
         {
           "microphonePermission": "Kayda Sathi needs microphone access to let you describe your legal problem by voice."
         }

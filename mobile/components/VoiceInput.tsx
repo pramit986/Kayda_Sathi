@@ -1,9 +1,9 @@
 // ============================================================
-// Kayda Sathi — VoiceInput Component
+// Kayda Sathi — VoiceInput Component (expo-audio)
 // ============================================================
-// Provides tap-to-record voice input using expo-av.
-// Records audio, encodes it, sends via FormData to /api/analyze,
-// and returns the transcribed text + structured legal analysis.
+// Uses expo-audio for native voice recording in modern Expo (SDK 52+).
+// Safely handles microphone permissions, encodes audio, sends via
+// FormData to /api/analyze, and returns the legal analysis.
 
 import React, { useState, useRef, useEffect } from 'react';
 import {
@@ -14,9 +14,13 @@ import {
   Animated,
   ActivityIndicator,
   Alert,
-  Platform,
 } from 'react-native';
-import { Audio } from 'expo-av';
+import {
+  useAudioRecorder,
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+} from 'expo-audio';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Spacing, BorderRadius } from '@/constants';
 import { api, LegalAnalysis } from '@/services/api';
@@ -36,10 +40,12 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
   fallbackText,
   disabled = false,
 }) => {
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
+
+  // Initialize the modern expo-audio recorder hook
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
   // Animation values for glowing pulsing rings while recording
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -75,47 +81,43 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
     };
   }, [isRecording]);
 
-  // Clean up recording and timers on unmount
+  // Clean up timers on unmount
   useEffect(() => {
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
-      if (recording) {
-        recording.stopAndUnloadAsync().catch(() => {});
+      if (recorder.isRecording) {
+        recorder.stop().catch(() => {});
       }
     };
-  }, [recording]);
+  }, []);
 
   const startRecording = async () => {
     if (disabled || isProcessing) return;
 
     try {
       // 1. Request microphone permissions
-      const permission = await Audio.requestPermissionsAsync();
+      const permission = await requestRecordingPermissionsAsync();
       if (!permission.granted) {
         Alert.alert(
           'Microphone Permission Required',
-          'Please enable microphone access in your device settings to use voice input for describing your legal issue.'
+          'Please enable microphone access to speak your legal issue to Kayda Sathi.'
         );
         onError?.('Microphone permission denied');
         return;
       }
 
       // 2. Configure audio mode
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
       });
 
       // 3. Prepare and start recording
-      const newRecording = new Audio.Recording();
-      await newRecording.prepareToRecordAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-      await newRecording.startAsync();
+      await recorder.prepareToRecordAsync();
+      recorder.record();
 
-      setRecording(newRecording);
       setIsRecording(true);
       setRecordingDuration(0);
 
@@ -129,12 +131,11 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
       Alert.alert('Recording Error', msg);
       onError?.(msg);
       setIsRecording(false);
-      setRecording(null);
     }
   };
 
   const stopRecordingAndAnalyze = async () => {
-    if (!recording || !isRecording) return;
+    if (!isRecording) return;
 
     // Stop duration timer
     if (timerRef.current) {
@@ -146,9 +147,8 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
     setIsProcessing(true);
 
     try {
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-      setRecording(null);
+      await recorder.stop();
+      const uri = recorder.uri;
 
       if (!uri) {
         throw new Error('Recording URI is null. Audio file could not be retrieved.');
@@ -177,11 +177,10 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    if (recording) {
+    if (recorder.isRecording) {
       try {
-        await recording.stopAndUnloadAsync();
+        await recorder.stop();
       } catch (_) {}
-      setRecording(null);
     }
     setIsRecording(false);
     setRecordingDuration(0);
