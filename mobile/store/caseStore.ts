@@ -42,22 +42,51 @@ export const CaseStore = {
     if (isInitialized) return;
 
     try {
-      // 1. Load from AsyncStorage
-      const storedCasesJson = await AsyncStorage.getItem(STORAGE_CASES_KEY);
-      const storedEvidenceJson = await AsyncStorage.getItem(STORAGE_EVIDENCE_KEY);
+      // 1. Load from AsyncStorage safely
+      let userCases: Case[] = [];
+      let userEvidence: Evidence[] = [];
 
-      const userCases: Case[] = storedCasesJson ? JSON.parse(storedCasesJson) : [];
-      const userEvidence: Evidence[] = storedEvidenceJson ? JSON.parse(storedEvidenceJson) : [];
+      try {
+        const storedCasesJson = await AsyncStorage.getItem(STORAGE_CASES_KEY);
+        if (storedCasesJson) {
+          const parsed = JSON.parse(storedCasesJson);
+          if (Array.isArray(parsed)) {
+            userCases = parsed;
+          }
+        }
+      } catch (parseErr) {
+        console.warn('Corrupted cases storage detected, resetting cache:', parseErr);
+        await AsyncStorage.removeItem(STORAGE_CASES_KEY).catch(() => {});
+      }
+
+      try {
+        const storedEvidenceJson = await AsyncStorage.getItem(STORAGE_EVIDENCE_KEY);
+        if (storedEvidenceJson) {
+          const parsed = JSON.parse(storedEvidenceJson);
+          if (Array.isArray(parsed)) {
+            userEvidence = parsed;
+          }
+        }
+      } catch (parseErr) {
+        console.warn('Corrupted evidence storage detected, resetting cache:', parseErr);
+        await AsyncStorage.removeItem(STORAGE_EVIDENCE_KEY).catch(() => {});
+      }
 
       // Merge demo case with stored user cases
       const caseMap = new Map<string, Case>();
       caseMap.set(DEMO_CASE.id, DEMO_CASE);
-      userCases.forEach(c => caseMap.set(c.id, c));
+      userCases.forEach(c => {
+        if (c && c.id) caseMap.set(c.id, c);
+      });
       casesCache = Array.from(caseMap.values());
 
       const evidenceMap = new Map<string, Evidence>();
-      DEMO_EVIDENCE.forEach(e => evidenceMap.set(e.id, e));
-      userEvidence.forEach(e => evidenceMap.set(e.id, e));
+      DEMO_EVIDENCE.forEach(e => {
+        if (e && e.id) evidenceMap.set(e.id, e);
+      });
+      userEvidence.forEach(e => {
+        if (e && e.id) evidenceMap.set(e.id, e);
+      });
       evidenceCache = Array.from(evidenceMap.values());
 
       isInitialized = true;
@@ -69,7 +98,11 @@ export const CaseStore = {
       });
     } catch (err) {
       console.warn('Error initializing CaseStore:', err);
+      // Guarantee fallback to demo data so UI never breaks
+      casesCache = [DEMO_CASE];
+      evidenceCache = [...DEMO_EVIDENCE];
       isInitialized = true;
+      notifyListeners();
     }
   },
 

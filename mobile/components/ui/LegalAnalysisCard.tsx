@@ -25,7 +25,10 @@ import * as Clipboard from 'expo-clipboard';
 import * as Speech from 'expo-speech';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Spacing, BorderRadius, CATEGORIES } from '@/constants';
-import { Card, Button, StatusBadge, ProgressBar } from '@/components/ui';
+import { Card } from './Card';
+import { Button } from './Button';
+import { StatusBadge } from './StatusBadge';
+import { ProgressBar } from './ProgressBar';
 import { LegalAnalysis } from '@/services/api';
 
 export interface LegalAnalysisCardProps {
