@@ -50,6 +50,13 @@ export default function RootLayout() {
       >
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
+          name="login"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_left',
+          }}
+        />
+        <Stack.Screen
           name="case/[id]"
           options={{
             headerShown: false,

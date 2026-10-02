@@ -46,7 +46,27 @@ const MENU_SECTIONS: { title: string; items: MenuItem[] }[] = [
   },
 ];
 
+import { useRouter } from 'expo-router';
+import { useAuth } from '@/store/authStore';
+
 export default function ProfileScreen() {
+  const router = useRouter();
+  const { user, logout } = useAuth();
+
+  const displayName = user?.displayName || 'Citizen';
+  const email = user?.email || 'citizen@kaydasathi.in';
+  const initials = displayName
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase();
+
+  const handleSignOut = async () => {
+    await logout();
+    router.replace('/login');
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
@@ -64,13 +84,19 @@ export default function ProfileScreen() {
           <Card variant="elevated">
             <View style={styles.profileRow}>
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>RS</Text>
+                <Text style={styles.avatarText}>{initials || 'KS'}</Text>
               </View>
               <View style={styles.profileInfo}>
-                <Text style={styles.profileName}>Rahul Sharma</Text>
-                <Text style={styles.profileEmail}>rahul.sharma@email.com</Text>
+                <Text style={styles.profileName}>{displayName}</Text>
+                <Text style={styles.profileEmail}>{email}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={Colors.neutral[400]} />
+              <Pressable
+                onPress={() => router.push('/login')}
+                hitSlop={8}
+                style={{ padding: 4 }}
+              >
+                <Ionicons name="swap-horizontal" size={20} color={Colors.primary[600]} />
+              </Pressable>
             </View>
           </Card>
         </View>
@@ -141,9 +167,9 @@ export default function ProfileScreen() {
         </View>
 
         {/* Sign Out */}
-        <Pressable style={styles.signOut}>
+        <Pressable style={styles.signOut} onPress={handleSignOut}>
           <Ionicons name="log-out-outline" size={18} color={Colors.error[600]} />
-          <Text style={styles.signOutText}>Sign Out</Text>
+          <Text style={styles.signOutText}>Sign Out / Switch Account</Text>
         </Pressable>
 
         <View style={{ height: Spacing['4xl'] }} />
