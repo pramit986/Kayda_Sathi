@@ -12,25 +12,26 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.primary[500],
+        tabBarActiveTintColor: Colors.primary[600],
         tabBarInactiveTintColor: Colors.neutral[400],
         tabBarStyle: {
           backgroundColor: Colors.neutral[0],
           borderTopWidth: 1,
-          borderTopColor: Colors.neutral[100],
-          height: Platform.OS === 'android' ? 64 : 84,
-          paddingBottom: Platform.OS === 'android' ? 8 : 28,
+          borderTopColor: Colors.neutral[200],
+          height: Platform.OS === 'android' ? 68 : 88,
+          paddingBottom: Platform.OS === 'android' ? 10 : 30,
           paddingTop: 8,
-          elevation: 8,
-          shadowColor: '#101828',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.06,
-          shadowRadius: 8,
+          elevation: 10,
+          shadowColor: '#0F172A',
+          shadowOffset: { width: 0, height: -3 },
+          shadowOpacity: 0.08,
+          shadowRadius: 10,
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '600',
-          letterSpacing: 0.2,
+          fontWeight: '700',
+          letterSpacing: 0.3,
+          marginTop: -2,
         },
       }}
     >

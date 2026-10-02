@@ -135,7 +135,8 @@ export default function NewCaseScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         {/* Header */}
         <View style={styles.header}>
@@ -427,6 +428,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: Spacing.xl,
+    paddingBottom: Spacing['6xl'],
   },
   promptSection: {
     alignItems: 'center',

@@ -230,36 +230,54 @@ export default function EvidenceScreen() {
         {/* Collected Evidence Section */}
         <SectionHeader title="Collected Proof" subtitle="Categorized & verified for Indian statutory forums" />
         <View style={styles.section}>
-          {filteredEvidence.map((evi) => {
-            const typeInfo = EVIDENCE_TYPE_ICONS[evi.type] || EVIDENCE_TYPE_ICONS.IMAGE;
-            return (
-              <Card
-                key={evi.id}
-                onPress={() => setSelectedEvidenceDetail(evi)}
-                style={styles.evidenceCard}
-                variant="outlined"
-              >
-                <View style={styles.evidenceRow}>
-                  <View style={[styles.evidenceIcon, { backgroundColor: typeInfo.bg }]}>
-                    <Ionicons name={typeInfo.icon} size={20} color={typeInfo.color} />
+          {filteredEvidence.length > 0 ? (
+            filteredEvidence.map((evi) => {
+              const typeInfo = EVIDENCE_TYPE_ICONS[evi.type] || EVIDENCE_TYPE_ICONS.IMAGE;
+              return (
+                <Card
+                  key={evi.id}
+                  onPress={() => setSelectedEvidenceDetail(evi)}
+                  style={styles.evidenceCard}
+                  variant="outlined"
+                >
+                  <View style={styles.evidenceRow}>
+                    <View style={[styles.evidenceIcon, { backgroundColor: typeInfo.bg }]}>
+                      <Ionicons name={typeInfo.icon} size={20} color={typeInfo.color} />
+                    </View>
+                    <View style={styles.evidenceInfo}>
+                      <Text style={styles.evidenceName}>{evi.title}</Text>
+                      <Text style={styles.evidenceType}>{typeInfo.label} · {evi.documentDate || 'Undated'}</Text>
+                      {evi.extractedFacts && evi.extractedFacts.length > 0 && (
+                        <View style={styles.factChips}>
+                          <Ionicons name="flash" size={12} color={Colors.success[600]} />
+                          <Text style={styles.factCount}>
+                            {evi.extractedFacts.length} facts extracted by AI
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={Colors.neutral[400]} />
                   </View>
-                  <View style={styles.evidenceInfo}>
-                    <Text style={styles.evidenceName}>{evi.title}</Text>
-                    <Text style={styles.evidenceType}>{typeInfo.label} · {evi.documentDate || 'Undated'}</Text>
-                    {evi.extractedFacts && evi.extractedFacts.length > 0 && (
-                      <View style={styles.factChips}>
-                        <Ionicons name="flash" size={12} color={Colors.success[600]} />
-                        <Text style={styles.factCount}>
-                          {evi.extractedFacts.length} facts extracted by AI
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={Colors.neutral[400]} />
-                </View>
-              </Card>
-            );
-          })}
+                </Card>
+              );
+            })
+          ) : (
+            <Card variant="outlined" style={styles.emptyEvidenceCard}>
+              <Ionicons name="shield-outline" size={28} color={Colors.neutral[400]} />
+              <Text style={styles.emptyEvidenceTitle}>No proof files uploaded yet</Text>
+              <Text style={styles.emptyEvidenceSubtitle}>
+                Add receipts, rental agreements, or screenshots to build your case.
+              </Text>
+              <Button
+                title="Upload Document / Photo"
+                onPress={() => setIsUploadModalOpen(true)}
+                variant="primary"
+                size="sm"
+                icon="add-circle-outline"
+                style={{ marginTop: Spacing.md }}
+              />
+            </Card>
+          )}
         </View>
 
         {/* Evidence Gaps Section */}
@@ -612,6 +630,30 @@ const styles = StyleSheet.create({
   },
   evidenceCard: {
     marginBottom: Spacing.sm,
+  },
+  emptyEvidenceCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.xl,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.neutral[0],
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: Colors.neutral[300],
+    marginBottom: Spacing.md,
+  },
+  emptyEvidenceTitle: {
+    fontSize: FontSize.md,
+    fontWeight: '700',
+    color: Colors.neutral[800],
+    marginTop: Spacing.xs,
+  },
+  emptyEvidenceSubtitle: {
+    fontSize: FontSize.xs,
+    color: Colors.neutral[500],
+    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 18,
   },
   evidenceRow: {
     flexDirection: 'row',

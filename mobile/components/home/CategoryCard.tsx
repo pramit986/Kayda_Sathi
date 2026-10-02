@@ -13,21 +13,23 @@ interface CategoryCardProps {
   color: string;
   bgColor: string;
   onPress: () => void;
+  horizontal?: boolean;
 }
 
-export function CategoryCard({ icon, label, color, bgColor, onPress }: CategoryCardProps) {
+export function CategoryCard({ icon, label, color, bgColor, onPress, horizontal = false }: CategoryCardProps) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
+        horizontal && styles.cardHorizontal,
         pressed && styles.pressed,
       ]}
     >
-      <View style={[styles.iconContainer, { backgroundColor: bgColor }]}>
-        <Ionicons name={icon} size={22} color={color} />
+      <View style={[styles.iconContainer, { backgroundColor: bgColor }, horizontal && styles.iconContainerHorizontal]}>
+        <Ionicons name={icon} size={horizontal ? 18 : 22} color={color} />
       </View>
-      <Text style={styles.label} numberOfLines={2}>{label}</Text>
+      <Text style={[styles.label, horizontal && styles.labelHorizontal]} numberOfLines={2}>{label}</Text>
     </Pressable>
   );
 }
@@ -64,5 +66,21 @@ const styles = StyleSheet.create({
     color: Colors.neutral[700],
     textAlign: 'center',
     lineHeight: 15,
+  },
+  cardHorizontal: {
+    width: 124,
+    marginRight: Spacing.sm,
+    marginBottom: Spacing.xs,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.sm,
+  },
+  iconContainerHorizontal: {
+    width: 40,
+    height: 40,
+    marginBottom: 6,
+  },
+  labelHorizontal: {
+    fontSize: 11,
+    lineHeight: 14,
   },
 });

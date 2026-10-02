@@ -246,6 +246,40 @@ function OverviewTab({ caseData, cat, contradictions, onToggleAction, onSwitchTa
         </View>
       </View>
 
+      {/* Visually Prominent Next Action Card */}
+      {(() => {
+        const nextAction = caseData.actionItems.find((a: any) => a.status !== 'DONE');
+        if (!nextAction) return null;
+        return (
+          <Card variant="elevated" style={styles.prominentNextActionCard}>
+            <View style={styles.nextActionTopRow}>
+              <View style={styles.nextActionBadge}>
+                <Ionicons name="flash" size={13} color="#B45309" />
+                <Text style={styles.nextActionBadgeText}>RECOMMENDED NEXT STEP</Text>
+              </View>
+              <Text style={styles.nextActionStepNum}>Step {nextAction.order} of {caseData.actionItems.length}</Text>
+            </View>
+            <Text style={styles.nextActionTitle}>{nextAction.title}</Text>
+            <Text style={styles.nextActionDesc} numberOfLines={2}>{nextAction.description}</Text>
+            <View style={styles.nextActionBtnRow}>
+              <Pressable
+                style={styles.nextActionCompleteBtn}
+                onPress={() => onToggleAction(nextAction.id)}
+              >
+                <Ionicons name="checkmark-circle" size={16} color={Colors.neutral[0]} />
+                <Text style={styles.nextActionCompleteText}>Mark Step as Done</Text>
+              </Pressable>
+              <Pressable
+                style={styles.nextActionViewAllBtn}
+                onPress={() => onSwitchTab('actions')}
+              >
+                <Text style={styles.nextActionViewAllText}>View Plan →</Text>
+              </Pressable>
+            </View>
+          </Card>
+        );
+      })()}
+
       {/* Case Preparation Progress */}
       <Card variant="elevated" style={styles.prepCard}>
         <View style={styles.prepHeader}>
@@ -562,7 +596,7 @@ function DocumentsTab({ caseData, draftingType, onGenerateDoc, onViewDoc }: any)
       </View>
 
       {/* Generated Documents List */}
-      {documents.length > 0 && (
+      {documents.length > 0 ? (
         <View style={{ marginBottom: Spacing.lg }}>
           <Text style={styles.subSectionTitle}>Drafted Dossier Documents ({documents.length})</Text>
           {documents.map((doc) => (
@@ -586,6 +620,12 @@ function DocumentsTab({ caseData, draftingType, onGenerateDoc, onViewDoc }: any)
               </View>
             </Card>
           ))}
+        </View>
+      ) : (
+        <View style={styles.docEmptyCard}>
+          <Ionicons name="document-text-outline" size={24} color={Colors.neutral[400]} />
+          <Text style={styles.docEmptyTitle}>No documents drafted yet</Text>
+          <Text style={styles.docEmptySub}>Select a template below to generate formal legal notices or briefs with AI.</Text>
         </View>
       )}
 
@@ -699,6 +739,7 @@ const styles = StyleSheet.create({
   },
   contentInner: {
     padding: Spacing.md,
+    paddingBottom: Spacing['6xl'],
   },
   notFoundCenter: {
     flex: 1,
@@ -791,6 +832,85 @@ const styles = StyleSheet.create({
     width: 1,
     height: 20,
     backgroundColor: Colors.neutral[200],
+  },
+  prominentNextActionCard: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+    borderWidth: 1.5,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    ...Shadow.sm,
+  },
+  nextActionTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  nextActionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.full,
+  },
+  nextActionBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#92400E',
+    letterSpacing: 0.5,
+  },
+  nextActionStepNum: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#B45309',
+  },
+  nextActionTitle: {
+    fontSize: FontSize.md,
+    fontWeight: '700',
+    color: Colors.neutral[900],
+    letterSpacing: -0.2,
+  },
+  nextActionDesc: {
+    fontSize: FontSize.xs,
+    color: '#78350F',
+    marginTop: 3,
+    lineHeight: 18,
+  },
+  nextActionBtnRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: Spacing.md,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: '#FDE68A',
+  },
+  nextActionCompleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.primary[600],
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 7,
+    borderRadius: BorderRadius.md,
+  },
+  nextActionCompleteText: {
+    fontSize: FontSize.xs,
+    fontWeight: '700',
+    color: Colors.neutral[0],
+  },
+  nextActionViewAllBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: Spacing.xs,
+  },
+  nextActionViewAllText: {
+    fontSize: FontSize.xs,
+    fontWeight: '600',
+    color: Colors.primary[700],
   },
   prepCard: {
     marginBottom: Spacing.md,
@@ -991,44 +1111,53 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   timelineDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.primary[500],
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: Colors.primary[600],
     marginTop: 6,
+    borderWidth: 2,
+    borderColor: Colors.primary[100],
   },
   timelineLine: {
     width: 2,
     flex: 1,
-    backgroundColor: Colors.neutral[200],
-    marginTop: 4,
+    backgroundColor: Colors.primary[100],
+    marginTop: 2,
   },
   timelineCard: {
     flex: 1,
-    marginLeft: Spacing.xs,
+    marginLeft: Spacing.sm,
     padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.neutral[0],
+    borderWidth: 1,
+    borderColor: Colors.neutral[200],
+    marginBottom: Spacing.xs,
+    ...Shadow.sm,
   },
   timelineHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   timelineDate: {
     fontSize: FontSize.xs,
-    fontWeight: '700',
+    fontWeight: '800',
     color: Colors.primary[700],
+    letterSpacing: 0.2,
   },
   timelineTitle: {
-    fontSize: FontSize.xs,
-    fontWeight: '600',
+    fontSize: FontSize.sm,
+    fontWeight: '700',
     color: Colors.neutral[900],
   },
   timelineDesc: {
-    fontSize: 11,
+    fontSize: FontSize.xs,
     color: Colors.neutral[600],
-    marginTop: 2,
-    lineHeight: 16,
+    marginTop: 3,
+    lineHeight: 18,
   },
   timelineSource: {
     flexDirection: 'row',
@@ -1214,6 +1343,30 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: Colors.neutral[500],
     marginTop: 1,
+  },
+  docEmptyCard: {
+    backgroundColor: Colors.neutral[0],
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: Colors.neutral[300],
+    marginBottom: Spacing.lg,
+  },
+  docEmptyTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+    color: Colors.neutral[800],
+    marginTop: Spacing.xs,
+  },
+  docEmptySub: {
+    fontSize: FontSize.xs,
+    color: Colors.neutral[500],
+    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 18,
   },
   templateCard: {
     marginBottom: Spacing.sm,

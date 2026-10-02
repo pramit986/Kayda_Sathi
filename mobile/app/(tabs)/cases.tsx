@@ -177,5 +177,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: Spacing.md,
+    paddingBottom: Spacing['6xl'],
   },
 });

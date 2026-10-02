@@ -46,46 +46,56 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        {/* ---- Primary CTA ---- */}
+        {/* ---- Primary CTA: Describe Your Problem ---- */}
         <View style={styles.ctaContainer}>
           <View style={styles.ctaCard}>
-            <View style={styles.ctaContent}>
-              <View style={styles.ctaIconRow}>
-                <View style={styles.ctaIconBg}>
-                  <Ionicons name="sparkles" size={22} color={Colors.primary[500]} />
-                </View>
+            <View style={styles.ctaHeaderRow}>
+              <View style={styles.ctaIconBg}>
+                <Ionicons name="sparkles" size={24} color={Colors.primary[600]} />
               </View>
-              <Text style={styles.ctaTitle}>Describe your problem</Text>
-              <Text style={styles.ctaSubtitle}>
-                Tell us what happened in plain words — Kayda Sathi AI classifies facts, detects gaps, and prepares your legal dossier.
-              </Text>
-              <View style={styles.ctaButtons}>
-                <Button
-                  title="Analyze with AI"
-                  onPress={() => router.push('/new-case')}
-                  variant="primary"
-                  icon="sparkles-outline"
-                  size="lg"
-                  style={{ flex: 1, marginRight: Spacing.sm }}
-                />
-                <Pressable
-                  onPress={() => router.push('/new-case')}
-                  style={styles.voiceButton}
-                >
-                  <Ionicons name="mic" size={22} color={Colors.primary[500]} />
-                </Pressable>
+              <View style={styles.aiTag}>
+                <Ionicons name="flash" size={11} color={Colors.primary[700]} />
+                <Text style={styles.aiTagText}>AI LEGAL DOSSIER</Text>
               </View>
+            </View>
+
+            <Text style={styles.ctaTitle}>Describe Your Problem</Text>
+            <Text style={styles.ctaSubtitle}>
+              Voice or type what happened in simple everyday words. Kayda Sathi extracts facts, identifies evidence gaps, and drafts your legal notices.
+            </Text>
+
+            <View style={styles.ctaButtons}>
+              <Button
+                title="Start Legal Assessment"
+                onPress={() => router.push('/new-case')}
+                variant="primary"
+                icon="arrow-forward"
+                size="lg"
+                style={{ flex: 1, marginRight: Spacing.sm }}
+              />
+              <Pressable
+                onPress={() => router.push('/new-case')}
+                style={styles.voiceButton}
+                accessibilityLabel="Speak your problem"
+              >
+                <Ionicons name="mic" size={24} color={Colors.primary[600]} />
+              </Pressable>
             </View>
           </View>
         </View>
 
-        {/* ---- Common Problems ---- */}
+        {/* ---- Quick Category Chips (Horizontal Scroll) ---- */}
         <SectionHeader
-          title="Common Grievance Categories"
+          title="Common Grievance Areas"
           actionLabel="View all"
           onAction={() => router.push('/new-case')}
         />
-        <View style={styles.categoriesGrid}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.horizontalCategoriesContent}
+          style={styles.horizontalCategoriesScroll}
+        >
           {COMMON_PROBLEMS.map((cat) => (
             <CategoryCard
               key={cat.id}
@@ -93,15 +103,16 @@ export default function HomeScreen() {
               label={cat.shortLabel}
               color={cat.color}
               bgColor={cat.bgColor}
+              horizontal
               onPress={() => router.push('/new-case')}
             />
           ))}
-        </View>
+        </ScrollView>
 
         {/* ---- Your Cases ---- */}
         <SectionHeader
-          title="Your Legal Dossiers"
-          actionLabel={cases.length > 0 ? 'View all' : undefined}
+          title="Your Active Cases"
+          actionLabel={cases.length > 0 ? `View all (${cases.length})` : undefined}
           onAction={cases.length > 0 ? () => router.push('/(tabs)/cases') : undefined}
         />
 
@@ -130,13 +141,13 @@ export default function HomeScreen() {
 
         {/* ---- Legal Disclaimer Footer ---- */}
         <View style={styles.disclaimerContainer}>
-          <Ionicons name="information-circle-outline" size={16} color={Colors.neutral[400]} />
+          <Ionicons name="shield-checkmark-outline" size={16} color={Colors.neutral[400]} />
           <Text style={styles.disclaimerText}>
-            Kayda Sathi provides legal information & standard grievance navigation. It does not provide legal advice or replace a licensed advocate.
+            Kayda Sathi provides legal information & standard grievance navigation. It does not replace a licensed advocate.
           </Text>
         </View>
 
-        <View style={{ height: Spacing['4xl'] }} />
+        <View style={{ height: Spacing['6xl'] }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -187,58 +198,77 @@ const styles = StyleSheet.create({
   ctaCard: {
     backgroundColor: Colors.neutral[0],
     borderRadius: BorderRadius.xl,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.neutral[200],
+    padding: Spacing.xl,
+    borderWidth: 1.5,
+    borderColor: Colors.primary[200],
     ...Shadow.md,
   },
-  ctaContent: {
-    padding: Spacing.xl,
-  },
-  ctaIconRow: {
+  ctaHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: Spacing.md,
   },
   ctaIconBg: {
-    width: 44,
-    height: 44,
-    borderRadius: BorderRadius.lg,
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.xl,
     backgroundColor: Colors.primary[50],
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.primary[100],
+  },
+  aiTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.primary[50],
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.primary[200],
+  },
+  aiTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.primary[700],
+    letterSpacing: 0.5,
   },
   ctaTitle: {
-    fontSize: FontSize.xl,
-    fontWeight: '700',
+    fontSize: FontSize['2xl'],
+    fontWeight: '800',
     color: Colors.neutral[900],
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
   ctaSubtitle: {
     fontSize: FontSize.sm,
-    color: Colors.neutral[500],
+    color: Colors.neutral[600],
     marginTop: Spacing.xs,
     marginBottom: Spacing.lg,
-    lineHeight: 20,
+    lineHeight: 21,
   },
   ctaButtons: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   voiceButton: {
-    width: 48,
-    height: 48,
-    borderRadius: BorderRadius.md,
+    width: 52,
+    height: 52,
+    borderRadius: BorderRadius.lg,
     backgroundColor: Colors.primary[50],
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: Colors.primary[200],
   },
-  categoriesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  horizontalCategoriesScroll: {
+    marginBottom: Spacing.xl,
+  },
+  horizontalCategoriesContent: {
     paddingHorizontal: Spacing.xl,
     gap: Spacing.sm,
-    marginBottom: Spacing.xl,
   },
   disclaimerContainer: {
     flexDirection: 'row',
