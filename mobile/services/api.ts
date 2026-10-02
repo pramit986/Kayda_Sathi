@@ -211,9 +211,6 @@ class ApiService {
    * transcription fails on the server side.
    */
   async analyzeVoice(audioUri: string, fallbackText?: string): Promise<LegalAnalysis & { transcribed_text?: string }> {
-    const formData = new FormData();
-
-    // Extract filename from URI
     const filename = audioUri.split('/').pop() || 'recording.m4a';
     const ext = filename.split('.').pop()?.toLowerCase() || 'm4a';
     const mimeType = ext === 'wav' ? 'audio/wav'
@@ -222,33 +219,38 @@ class ApiService {
       : ext === 'webm' ? 'audio/webm'
       : 'audio/m4a';
 
-    // React Native FormData accepts { uri, type, name }
-    (formData as any).append('audio', {
-      uri: audioUri,
-      type: mimeType,
-      name: filename,
-    });
+    try {
+      // Read the recorded file directly as a Blob
+      const fileResp = await fetch(audioUri);
+      const blob = await fileResp.blob();
 
-    if (fallbackText) {
-      formData.append('fallback_text', fallbackText);
+      // Convert to base64 string
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const res = (reader.result as string) || '';
+          const base64 = res.includes(',') ? res.split(',')[1] : res;
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+
+      return await this.request<LegalAnalysis & { transcribed_text?: string }>('/analyze', {
+        method: 'POST',
+        body: {
+          audio_base64: base64Data,
+          mime_type: mimeType,
+          fallback_text: fallbackText,
+        },
+      });
+    } catch (err: any) {
+      console.warn('Voice base64 upload failed:', err);
+      if (fallbackText && fallbackText.trim().length >= 5) {
+        return this.analyzeText(fallbackText);
+      }
+      throw new Error(err?.message || 'Failed to process voice recording.');
     }
-
-    const response = await fetch(`${this.baseUrl}/analyze`, {
-      method: 'POST',
-      body: formData,
-      headers: {
-        Accept: 'application/json',
-        ...(this.authToken ? { Authorization: `Bearer ${this.authToken}` } : {}),
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Voice analysis failed: ${response.status}`);
-    }
-
-    const result = await response.json();
-    return result.data;
   }
 }
 

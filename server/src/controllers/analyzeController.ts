@@ -208,10 +208,11 @@ async function transcribeAudio(filePath: string, mimeType: string): Promise<stri
 export const analyzeQuery = async (req: Request, res: Response) => {
   try {
     let userText = '';
+    let fromVoice = false;
 
-    // Handle multipart (voice upload) or JSON (text) body
+    // Handle multipart (voice upload), base64 JSON, or text body
     if (req.file) {
-      // Voice file was uploaded
+      fromVoice = true;
       const filePath = req.file.path;
       const mimeType = req.file.mimetype || 'audio/m4a';
 
@@ -221,8 +222,25 @@ export const analyzeQuery = async (req: Request, res: Response) => {
         console.warn('Transcription failed:', transcribeErr);
         userText = req.body?.fallback_text || '';
       } finally {
-        // Clean up temp audio file
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      }
+    } else if (req.body?.audio_base64) {
+      fromVoice = true;
+      const mimeType = req.body.mime_type || 'audio/m4a';
+      try {
+        if (geminiClient.isAvailable()) {
+          const result = await geminiClient.analyzeEvidenceFile<{ transcript: string }>(
+            req.body.audio_base64,
+            mimeType,
+            'Transcribe this audio recording accurately into English text. The speaker is describing a legal problem. Return ONLY valid JSON: {"transcript": "the transcribed text"}'
+          );
+          userText = result?.transcript || req.body?.fallback_text || '';
+        } else {
+          userText = req.body?.fallback_text || 'Landlord withholding security deposit without valid justification.';
+        }
+      } catch (transcribeErr) {
+        console.warn('Transcription from base64 failed:', transcribeErr);
+        userText = req.body?.fallback_text || '';
       }
     } else {
       userText = (req.body?.text || req.body?.description || '').trim();
@@ -251,7 +269,7 @@ export const analyzeQuery = async (req: Request, res: Response) => {
     }
 
     // Attach the transcribed text if came from voice
-    if (req.file) {
+    if (fromVoice && userText) {
       analysisResult.transcribed_text = userText;
     }
 
