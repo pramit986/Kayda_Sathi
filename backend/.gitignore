@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+
+# Prevent Firebase service-account credentials and secrets from being committed
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json

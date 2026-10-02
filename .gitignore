@@ -16,6 +16,7 @@ node_modules/
 !*.env.example
 server/.env
 mobile/.env
+backend/.env
 
 # Credentials & Service Accounts
 *-firebase-adminsdk-*.json
