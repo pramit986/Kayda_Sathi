@@ -1,22 +1,23 @@
 // ============================================================
-// Kayda Sathi — Cases Screen (Phases 2 & 4)
+// Kayda Sathi — Cases Screen (Polished UI)
 // ============================================================
 
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Colors, FontSize, Spacing, BorderRadius } from '@/constants';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, FontSize, Spacing, BorderRadius, Shadow } from '@/constants';
 import { Button, EmptyState } from '@/components/ui';
 import { CaseCard } from '@/components/cases/CaseCard';
 import { useCases } from '@/store/caseStore';
 
-type FilterTab = 'ALL' | 'ACTIVE' | 'ACTION_REQUIRED' | 'RESOLVED' | 'ARCHIVED';
+type FilterTab = 'ALL' | 'ACTIVE' | 'ACTION_REQUIRED' | 'RESOLVED';
 
 const FILTER_TABS: { key: FilterTab; label: string }[] = [
   { key: 'ALL', label: 'All' },
   { key: 'ACTIVE', label: 'Active' },
-  { key: 'ACTION_REQUIRED', label: 'Action Required' },
+  { key: 'ACTION_REQUIRED', label: 'Action Needed' },
   { key: 'RESOLVED', label: 'Resolved' },
 ];
 
@@ -40,8 +41,8 @@ export default function CasesScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>My Cases</Text>
-          <Text style={styles.subtitle}>{cases.length} active legal dossier{cases.length === 1 ? '' : 's'}</Text>
+          <Text style={styles.title}>Legal Dossiers</Text>
+          <Text style={styles.subtitle}>{cases.length} active legal dispute{cases.length === 1 ? '' : 's'}</Text>
         </View>
         <Button
           title="New Case"
@@ -52,32 +53,25 @@ export default function CasesScreen() {
         />
       </View>
 
-      {/* Filter tabs */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterContainer}
-      >
-        {FILTER_TABS.map((tab) => (
-          <Pressable
-            key={tab.key}
-            onPress={() => setActiveFilter(tab.key)}
-            style={[
-              styles.filterTab,
-              activeFilter === tab.key && styles.filterTabActive,
-            ]}
-          >
-            <Text
-              style={[
-                styles.filterTabText,
-                activeFilter === tab.key && styles.filterTabTextActive,
-              ]}
-            >
-              {tab.label}
-            </Text>
-          </Pressable>
-        ))}
-      </ScrollView>
+      {/* Modern Compact Filter Bar */}
+      <View style={styles.filterWrapper}>
+        <View style={styles.filterControl}>
+          {FILTER_TABS.map((tab) => {
+            const isActive = activeFilter === tab.key;
+            return (
+              <Pressable
+                key={tab.key}
+                onPress={() => setActiveFilter(tab.key)}
+                style={[styles.filterTab, isActive && styles.filterTabActive]}
+              >
+                <Text style={[styles.filterTabText, isActive && styles.filterTabTextActive]}>
+                  {tab.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
 
       {/* Case list */}
       <ScrollView
@@ -132,48 +126,56 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.sm,
+    backgroundColor: Colors.neutral[0],
   },
   title: {
     fontSize: FontSize['2xl'],
-    fontWeight: '700',
+    fontWeight: '800',
     color: Colors.neutral[900],
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
   subtitle: {
     fontSize: FontSize.xs,
     color: Colors.neutral[500],
     marginTop: 2,
   },
-  filterContainer: {
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.sm,
-    gap: Spacing.sm,
-  },
-  filterTab: {
+  filterWrapper: {
+    backgroundColor: Colors.neutral[0],
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.neutral[0],
-    borderWidth: 1,
-    borderColor: Colors.neutral[200],
-    marginRight: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.neutral[200],
+  },
+  filterControl: {
+    flexDirection: 'row',
+    backgroundColor: Colors.neutral[100],
+    borderRadius: BorderRadius.md,
+    padding: 2,
+  },
+  filterTab: {
+    flex: 1,
+    paddingVertical: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: BorderRadius.sm,
   },
   filterTabActive: {
-    backgroundColor: Colors.primary[500],
-    borderColor: Colors.primary[500],
+    backgroundColor: Colors.neutral[0],
+    ...Shadow.sm,
   },
   filterTabText: {
-    fontSize: FontSize.sm,
+    fontSize: 11,
     fontWeight: '600',
-    color: Colors.neutral[600],
+    color: Colors.neutral[500],
   },
   filterTabTextActive: {
-    color: Colors.neutral[0],
+    color: Colors.primary[700],
+    fontWeight: '700',
   },
   scroll: {
     flex: 1,
   },
   scrollContent: {
-    paddingTop: Spacing.sm,
+    paddingTop: Spacing.md,
   },
 });

@@ -1,13 +1,13 @@
 // ============================================================
-// Kayda Sathi — CaseCard Component
+// Kayda Sathi — CaseCard Component (Polished)
 // ============================================================
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Card, StatusBadge, ProgressBar, type BadgeVariant } from '@/components/ui';
-import { Colors, FontSize, Spacing, BorderRadius } from '@/constants';
+import { Card, StatusBadge, type BadgeVariant } from '@/components/ui';
+import { Colors, FontSize, Spacing, BorderRadius, Shadow } from '@/constants';
 import { getCategoryById, type CategoryId } from '@/constants';
 
 interface CaseCardProps {
@@ -26,7 +26,7 @@ interface CaseCardProps {
 
 const STATUS_LABELS: Record<string, { label: string; variant: BadgeVariant }> = {
   ACTIVE: { label: 'Active', variant: 'active' },
-  ACTION_REQUIRED: { label: 'Action Required', variant: 'action_required' },
+  ACTION_REQUIRED: { label: 'Action Needed', variant: 'action_required' },
   RESOLVED: { label: 'Resolved', variant: 'resolved' },
   ARCHIVED: { label: 'Archived', variant: 'archived' },
 };
@@ -57,10 +57,10 @@ export function CaseCard({ id, title, category, status, preparation, updatedAt, 
         <StatusBadge label={statusInfo.label} variant={statusInfo.variant} />
       </View>
 
-      {/* Mini preparation bar */}
+      {/* Preparation Progress Strip */}
       <View style={styles.prepContainer}>
         <View style={styles.prepHeader}>
-          <Text style={styles.prepLabel}>Case Preparation</Text>
+          <Text style={styles.prepLabel}>Legal Readiness</Text>
           <Text style={styles.prepValue}>{avgPrep}%</Text>
         </View>
         <View style={styles.prepTrack}>
@@ -71,11 +71,11 @@ export function CaseCard({ id, title, category, status, preparation, updatedAt, 
       <View style={styles.footer}>
         {isDemo && (
           <View style={styles.demoBadge}>
-            <Text style={styles.demoText}>DEMO</Text>
+            <Text style={styles.demoText}>SAMPLE CASE</Text>
           </View>
         )}
         <Text style={styles.updated}>Updated {formatRelativeTime(updatedAt)}</Text>
-        <Ionicons name="chevron-forward" size={16} color={Colors.neutral[400]} />
+        <Ionicons name="chevron-forward" size={15} color={Colors.neutral[400]} />
       </View>
     </Card>
   );
@@ -100,6 +100,10 @@ const styles = StyleSheet.create({
   card: {
     marginHorizontal: Spacing.xl,
     marginBottom: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.neutral[200],
+    ...Shadow.sm,
   },
   header: {
     flexDirection: 'row',
@@ -112,9 +116,9 @@ const styles = StyleSheet.create({
     marginRight: Spacing.sm,
   },
   iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: BorderRadius.sm,
+    width: 38,
+    height: 38,
+    borderRadius: BorderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.md,
@@ -123,18 +127,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: FontSize.lg,
-    fontWeight: '600',
+    fontSize: FontSize.md,
+    fontWeight: '700',
     color: Colors.neutral[900],
     letterSpacing: -0.2,
   },
   category: {
-    fontSize: FontSize.sm,
+    fontSize: FontSize.xs,
     color: Colors.neutral[500],
     marginTop: 2,
+    fontWeight: '500',
   },
   prepContainer: {
-    marginTop: Spacing.lg,
+    marginTop: Spacing.md,
   },
   prepHeader: {
     flexDirection: 'row',
@@ -142,16 +147,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   prepLabel: {
-    fontSize: FontSize.xs,
-    fontWeight: '500',
-    color: Colors.neutral[500],
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.neutral[400],
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   prepValue: {
-    fontSize: FontSize.xs,
+    fontSize: 11,
     fontWeight: '700',
-    color: Colors.primary[500],
+    color: Colors.primary[700],
   },
   prepTrack: {
     height: 4,
@@ -168,7 +173,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: Spacing.md,
-    paddingTop: Spacing.md,
+    paddingTop: Spacing.sm,
     borderTopWidth: 1,
     borderTopColor: Colors.neutral[100],
   },
@@ -176,13 +181,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.warning[50],
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: BorderRadius.sm,
+    borderRadius: BorderRadius.xs,
     marginRight: Spacing.sm,
   },
   demoText: {
     fontSize: 9,
-    fontWeight: '700',
-    color: Colors.warning[600],
+    fontWeight: '800',
+    color: Colors.warning[700],
     letterSpacing: 0.5,
   },
   updated: {

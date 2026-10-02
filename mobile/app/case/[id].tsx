@@ -1,5 +1,5 @@
 // ============================================================
-// Kayda Sathi — Case Detail Screen (Phases 2, 3, 4)
+// Kayda Sathi — Case Detail Screen (Polished UI & Segmented Tabs)
 // ============================================================
 
 import React, { useState } from 'react';
@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, FontSize, Spacing, BorderRadius } from '@/constants';
+import { Colors, FontSize, Spacing, BorderRadius, Shadow } from '@/constants';
 import { Card, StatusBadge, ProgressBar, Button, type BadgeVariant } from '@/components/ui';
 import { useCase, useEvidence } from '@/store/caseStore';
 import { DEMO_CASE, DEMO_CONTRADICTIONS } from '@/store/demoData';
@@ -25,11 +25,12 @@ import { CaseDocument } from '@/types';
 
 type TabKey = 'overview' | 'timeline' | 'evidence' | 'actions' | 'documents';
 
+// Compact segmented tabs that fit on all screen sizes without scrolling
 const TABS: { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'overview', label: 'Overview', icon: 'grid-outline' },
   { key: 'timeline', label: 'Timeline', icon: 'time-outline' },
-  { key: 'evidence', label: 'Evidence', icon: 'shield-checkmark-outline' },
-  { key: 'actions', label: 'Actions', icon: 'rocket-outline' },
+  { key: 'evidence', label: 'Proof', icon: 'shield-checkmark-outline' },
+  { key: 'actions', label: 'Actions', icon: 'checkbox-outline' },
   { key: 'documents', label: 'Docs', icon: 'document-text-outline' },
 ];
 
@@ -43,7 +44,7 @@ const STATUS_MAP: Record<string, { label: string; variant: BadgeVariant }> = {
 export default function CaseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
-  const [draftingDoc, setDraftingDoc] = useState(false);
+  const [draftingType, setDraftingType] = useState<CaseDocument['type'] | null>(null);
   const [selectedDoc, setSelectedDoc] = useState<CaseDocument | null>(null);
 
   const caseId = id || DEMO_CASE.id;
@@ -76,23 +77,23 @@ export default function CaseDetailScreen() {
   const contradictions = DEMO_CONTRADICTIONS;
 
   const handleGenerateDoc = async (type: CaseDocument['type']) => {
-    setDraftingDoc(true);
+    setDraftingType(type);
     try {
       const doc = await generateDocument(type);
       setSelectedDoc(doc);
     } catch (err: any) {
       Alert.alert('Drafting Error', err?.message || 'Could not draft document.');
     } finally {
-      setDraftingDoc(false);
+      setDraftingType(null);
     }
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* Top Bar */}
+      {/* Top Header */}
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={22} color={Colors.neutral[700]} />
+          <Ionicons name="arrow-back" size={22} color={Colors.neutral[800]} />
         </Pressable>
         <View style={styles.topBarCenter}>
           <Text style={styles.topBarTitle} numberOfLines={1}>{c.title}</Text>
@@ -100,31 +101,32 @@ export default function CaseDetailScreen() {
         </View>
       </View>
 
-      {/* Tab Navigation */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.tabContainer}
-      >
-        {TABS.map((tab) => (
-          <Pressable
-            key={tab.key}
-            onPress={() => setActiveTab(tab.key)}
-            style={[styles.tab, activeTab === tab.key && styles.tabActive]}
-          >
-            <Ionicons
-              name={tab.icon}
-              size={16}
-              color={activeTab === tab.key ? Colors.primary[500] : Colors.neutral[400]}
-            />
-            <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
-              {tab.label}
-            </Text>
-          </Pressable>
-        ))}
-      </ScrollView>
+      {/* Modern Compact Segmented Bar (All 5 buttons fit on 1 row without horizontal scroll) */}
+      <View style={styles.segmentedContainer}>
+        <View style={styles.segmentedControl}>
+          {TABS.map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <Pressable
+                key={tab.key}
+                onPress={() => setActiveTab(tab.key)}
+                style={[styles.segmentTab, isActive && styles.segmentTabActive]}
+              >
+                <Ionicons
+                  name={tab.icon}
+                  size={14}
+                  color={isActive ? Colors.primary[600] : Colors.neutral[500]}
+                />
+                <Text style={[styles.segmentLabel, isActive && styles.segmentLabelActive]}>
+                  {tab.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
 
-      {/* Content */}
+      {/* Main Content Area */}
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentInner}
@@ -136,6 +138,7 @@ export default function CaseDetailScreen() {
             cat={cat}
             contradictions={contradictions}
             onToggleAction={toggleAction}
+            onSwitchTab={setActiveTab}
           />
         )}
         {activeTab === 'timeline' && <TimelineTab caseData={c} />}
@@ -146,7 +149,7 @@ export default function CaseDetailScreen() {
         {activeTab === 'documents' && (
           <DocumentsTab
             caseData={c}
-            draftingDoc={draftingDoc}
+            draftingType={draftingType}
             onGenerateDoc={handleGenerateDoc}
             onViewDoc={setSelectedDoc}
           />
@@ -162,21 +165,26 @@ export default function CaseDetailScreen() {
       >
         <SafeAreaView style={styles.docModalSafe}>
           <View style={styles.docModalHeader}>
-            <Text style={styles.docModalTitle} numberOfLines={1}>{selectedDoc?.title}</Text>
-            <Pressable onPress={() => setSelectedDoc(null)} hitSlop={10}>
-              <Ionicons name="close" size={24} color={Colors.neutral[700]} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.docModalTitle} numberOfLines={1}>{selectedDoc?.title}</Text>
+              <Text style={styles.docModalSub}>Generated by Gemini Legal Assistant</Text>
+            </View>
+            <Pressable onPress={() => setSelectedDoc(null)} hitSlop={10} style={styles.closeBtn}>
+              <Ionicons name="close" size={22} color={Colors.neutral[700]} />
             </Pressable>
           </View>
           <ScrollView style={styles.docModalScroll} contentContainerStyle={styles.docModalContent}>
             <View style={styles.docTypeBadgeRow}>
               <StatusBadge label={selectedDoc?.type.replace('_', ' ') || 'NOTICE'} variant="info" />
-              <Text style={styles.docGeneratedAt}>Drafted by Gemini Legal Engine</Text>
+              <Text style={styles.docGeneratedAt}>
+                {selectedDoc ? new Date(selectedDoc.generatedAt).toLocaleDateString() : ''}
+              </Text>
             </View>
             <View style={styles.docPaper}>
               <Text style={styles.docTextContent}>{selectedDoc?.content}</Text>
             </View>
             <Button
-              title="Done Reading"
+              title="Close Document"
               onPress={() => setSelectedDoc(null)}
               variant="primary"
               size="md"
@@ -193,66 +201,103 @@ export default function CaseDetailScreen() {
 // -------------------------------------------------------------
 // Overview Tab
 // -------------------------------------------------------------
-function OverviewTab({ caseData, cat, contradictions, onToggleAction }: any) {
+function OverviewTab({ caseData, cat, contradictions, onToggleAction, onSwitchTab }: any) {
+  const verifiedFactsCount = caseData.facts.filter((f: any) => f.status === 'VERIFIED').length;
+  const doneActionsCount = caseData.actionItems.filter((a: any) => a.status === 'DONE').length;
+
   return (
     <>
-      {/* Category & Description */}
-      <Card variant="elevated" style={{ marginBottom: Spacing.md }}>
-        <View style={styles.overviewHeader}>
+      {/* Hero Card */}
+      <View style={styles.heroCard}>
+        <View style={styles.heroTopRow}>
           {cat && (
-            <View style={[styles.catBadge, { backgroundColor: cat.bgColor }]}>
-              <Ionicons name={cat.icon} size={15} color={cat.color} />
-              <Text style={[styles.catLabel, { color: cat.color }]}>{cat.label}</Text>
+            <View style={[styles.heroCatBadge, { backgroundColor: cat.bgColor }]}>
+              <Ionicons name={cat.icon} size={13} color={cat.color} />
+              <Text style={[styles.heroCatText, { color: cat.color }]}>{cat.label}</Text>
             </View>
           )}
           {caseData.jurisdiction && (
-            <View style={styles.jurisdictionBadge}>
-              <Ionicons name="location-outline" size={12} color={Colors.neutral[500]} />
-              <Text style={styles.jurisdictionText}>{caseData.jurisdiction}</Text>
+            <View style={styles.jurisdictionChip}>
+              <Ionicons name="location-outline" size={11} color={Colors.neutral[500]} />
+              <Text style={styles.jurisdictionChipText} numberOfLines={1}>{caseData.jurisdiction}</Text>
             </View>
           )}
         </View>
-        <Text style={styles.description}>{caseData.description}</Text>
-      </Card>
+
+        <Text style={styles.heroTitle}>{caseData.title}</Text>
+        <Text style={styles.heroDesc}>{caseData.description}</Text>
+
+        {/* Quick Dossier Stats */}
+        <View style={styles.statsStrip}>
+          <View style={styles.statBox}>
+            <Text style={styles.statNumber}>{caseData.facts.length}</Text>
+            <Text style={styles.statLabel}>Facts ({verifiedFactsCount} Verified)</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statBox}>
+            <Text style={styles.statNumber}>{caseData.evidenceIds?.length || 0}</Text>
+            <Text style={styles.statLabel}>Proof Files</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statBox}>
+            <Text style={styles.statNumber}>{doneActionsCount}/{caseData.actionItems.length}</Text>
+            <Text style={styles.statLabel}>Tasks Done</Text>
+          </View>
+        </View>
+      </View>
 
       {/* Case Preparation Progress */}
-      <Card variant="elevated" style={{ marginBottom: Spacing.md }}>
-        <Text style={styles.sectionTitle}>Case Preparation Progress</Text>
-        <ProgressBar label="Understanding" value={caseData.preparation.understanding} color={Colors.primary[500]} />
-        <ProgressBar label="Evidence" value={caseData.preparation.evidence} color={Colors.info[500]} />
-        <ProgressBar label="Action Readiness" value={caseData.preparation.actionReadiness} color={Colors.success[500]} />
+      <Card variant="elevated" style={styles.prepCard}>
+        <View style={styles.prepHeader}>
+          <View style={styles.prepHeaderLeft}>
+            <Ionicons name="speedometer-outline" size={18} color={Colors.primary[600]} />
+            <Text style={styles.sectionTitle}>Legal Readiness Score</Text>
+          </View>
+          <Text style={styles.prepScoreTotal}>{caseData.preparation.actionReadiness}% Ready</Text>
+        </View>
+        <ProgressBar label="Factual Understanding" value={caseData.preparation.understanding} color={Colors.primary[500]} />
+        <ProgressBar label="Documentary Evidence" value={caseData.preparation.evidence} color={Colors.info[600]} />
+        <ProgressBar label="Action Readiness" value={caseData.preparation.actionReadiness} color={Colors.success[600]} />
       </Card>
 
-      {/* Key Facts */}
-      <Card variant="elevated" style={{ marginBottom: Spacing.md }}>
-        <Text style={styles.sectionTitle}>Key Objective Facts ({caseData.facts.length})</Text>
-        {caseData.facts.map((fact: any) => (
-          <View key={fact.id} style={styles.factRow}>
-            <View style={[
-              styles.factDot,
-              {
-                backgroundColor: fact.status === 'VERIFIED' ? Colors.success[500]
-                  : fact.status === 'USER_STATED' ? Colors.info[500]
-                  : Colors.neutral[400],
-              },
-            ]} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.factStatement}>{fact.statement}</Text>
-              <Text style={styles.factStatus}>
-                {fact.status.replace('_', ' ')}
-                {fact.source ? ` · ${fact.source}` : ''}
-              </Text>
+      {/* Key Objective Facts */}
+      <Card variant="elevated" style={styles.cardSection}>
+        <View style={styles.cardHeaderRow}>
+          <Text style={styles.sectionTitle}>Verified Facts ({caseData.facts.length})</Text>
+          <Pressable onPress={() => onSwitchTab('timeline')}>
+            <Text style={styles.headerActionText}>View Timeline →</Text>
+          </Pressable>
+        </View>
+
+        {caseData.facts.slice(0, 4).map((fact: any) => {
+          const isVerified = fact.status === 'VERIFIED';
+          return (
+            <View key={fact.id} style={styles.factRow}>
+              <View style={[styles.factStatusIcon, isVerified ? styles.factVerifiedBg : styles.factStatedBg]}>
+                <Ionicons
+                  name={isVerified ? 'shield-checkmark' : 'information'}
+                  size={12}
+                  color={isVerified ? Colors.success[600] : Colors.info[600]}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.factStatement}>{fact.statement}</Text>
+                <Text style={styles.factMeta}>
+                  {fact.status.replace('_', ' ')}
+                  {fact.source ? ` · Source: ${fact.source}` : ''}
+                </Text>
+              </View>
             </View>
-          </View>
-        ))}
+          );
+        })}
       </Card>
 
       {/* Inconsistencies / Contradictions */}
       {contradictions && contradictions.length > 0 && (
         <Card variant="outlined" style={styles.contradictionCard}>
           <View style={styles.contradictionHeader}>
-            <Ionicons name="alert-circle" size={20} color={Colors.warning[500]} />
-            <Text style={styles.contradictionTitle}>Potential Inconsistency</Text>
+            <Ionicons name="alert-circle" size={18} color={Colors.warning[600]} />
+            <Text style={styles.contradictionTitle}>Detected Inconsistency</Text>
           </View>
           {contradictions.map((contra: any) => (
             <View key={contra.id} style={styles.contradictionBody}>
@@ -263,7 +308,7 @@ function OverviewTab({ caseData, cat, contradictions, onToggleAction }: any) {
                   <Text style={styles.sourceValue}>{contra.sourceA.value}</Text>
                 </View>
                 <View style={styles.contradictionVs}>
-                  <Text style={styles.vsText}>vs</Text>
+                  <Text style={styles.vsText}>VS</Text>
                 </View>
                 <View style={styles.contradictionSource}>
                   <Text style={styles.sourceLabel}>{contra.sourceB.label}</Text>
@@ -275,36 +320,39 @@ function OverviewTab({ caseData, cat, contradictions, onToggleAction }: any) {
         </Card>
       )}
 
-      {/* Next 3 Actions */}
-      <Card variant="elevated" style={{ marginBottom: Spacing.md }}>
-        <Text style={styles.sectionTitle}>Immediate Next Actions</Text>
-        {caseData.actionItems.map((action: any, i: number) => (
-          <Pressable
-            key={action.id}
-            style={[styles.actionRow, i < caseData.actionItems.length - 1 && styles.actionBorder]}
-            onPress={() => onToggleAction(action.id)}
-          >
-            <View style={[
-              styles.actionCheck,
-              action.status === 'DONE' && styles.actionCheckDone,
-            ]}>
-              {action.status === 'DONE' ? (
-                <Ionicons name="checkmark" size={14} color={Colors.neutral[0]} />
-              ) : (
-                <Text style={styles.actionNumber}>{action.order}</Text>
-              )}
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[
-                styles.actionTitle,
-                action.status === 'DONE' && styles.actionTitleDone,
-              ]}>
-                {action.title}
-              </Text>
-              <Text style={styles.actionDesc} numberOfLines={2}>{action.description}</Text>
-            </View>
+      {/* Immediate Next Actions */}
+      <Card variant="elevated" style={styles.cardSection}>
+        <View style={styles.cardHeaderRow}>
+          <Text style={styles.sectionTitle}>Immediate Action Checklist</Text>
+          <Pressable onPress={() => onSwitchTab('actions')}>
+            <Text style={styles.headerActionText}>Full Plan →</Text>
           </Pressable>
-        ))}
+        </View>
+
+        {caseData.actionItems.map((action: any, i: number) => {
+          const isDone = action.status === 'DONE';
+          return (
+            <Pressable
+              key={action.id}
+              style={[styles.actionRow, i < caseData.actionItems.length - 1 && styles.actionBorder]}
+              onPress={() => onToggleAction(action.id)}
+            >
+              <View style={[styles.actionCheck, isDone && styles.actionCheckDone]}>
+                {isDone ? (
+                  <Ionicons name="checkmark" size={13} color={Colors.neutral[0]} />
+                ) : (
+                  <Text style={styles.actionNumber}>{action.order}</Text>
+                )}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.actionTitle, isDone && styles.actionTitleDone]}>
+                  {action.title}
+                </Text>
+                <Text style={styles.actionDesc} numberOfLines={2}>{action.description}</Text>
+              </View>
+            </Pressable>
+          );
+        })}
       </Card>
 
       <View style={{ height: Spacing['4xl'] }} />
@@ -318,7 +366,11 @@ function OverviewTab({ caseData, cat, contradictions, onToggleAction }: any) {
 function TimelineTab({ caseData }: any) {
   return (
     <>
-      <Text style={styles.tabSectionTitle}>Chronological Sequence of Events</Text>
+      <View style={styles.tabHeadingRow}>
+        <Text style={styles.tabSectionTitle}>Chronological Timeline</Text>
+        <Text style={styles.tabSubtitle}>Reconstructed from evidence timestamps & statements</Text>
+      </View>
+
       {caseData.timeline.map((event: any, i: number) => (
         <View key={event.id} style={styles.timelineItem}>
           <View style={styles.timelineLeft}>
@@ -326,13 +378,15 @@ function TimelineTab({ caseData }: any) {
             {i < caseData.timeline.length - 1 && <View style={styles.timelineLine} />}
           </View>
           <Card variant="outlined" style={styles.timelineCard}>
-            <Text style={styles.timelineDate}>{event.date}</Text>
+            <View style={styles.timelineHeader}>
+              <Text style={styles.timelineDate}>{event.date}</Text>
+              <View style={styles.timelineSource}>
+                <Ionicons name="shield-outline" size={10} color={Colors.primary[600]} />
+                <Text style={styles.timelineSourceText}>{event.sourceType.replace('_', ' ')}</Text>
+              </View>
+            </View>
             <Text style={styles.timelineTitle}>{event.title}</Text>
             {event.description && <Text style={styles.timelineDesc}>{event.description}</Text>}
-            <View style={styles.timelineSource}>
-              <Ionicons name="shield-outline" size={12} color={Colors.primary[500]} />
-              <Text style={styles.timelineSourceText}>{event.sourceType.replace('_', ' ')}</Text>
-            </View>
           </Card>
         </View>
       ))}
@@ -347,35 +401,49 @@ function TimelineTab({ caseData }: any) {
 function EvidenceTab({ caseData, evidenceList }: any) {
   return (
     <>
-      <Text style={styles.tabSectionTitle}>Legal Claims & Proof Mapping</Text>
+      <View style={styles.tabHeadingRow}>
+        <Text style={styles.tabSectionTitle}>Proof & Claims Mapping</Text>
+        <Text style={styles.tabSubtitle}>Evidence linked to statutory claims</Text>
+      </View>
 
       {/* Claims */}
       {caseData.claims.map((claim: any) => (
-        <Card key={claim.id} variant="elevated" style={{ marginBottom: Spacing.md }}>
+        <Card key={claim.id} variant="elevated" style={styles.claimCard}>
           <View style={styles.claimHeader}>
+            <Text style={styles.claimBadgeTitle}>LEGAL CLAIM</Text>
             <StatusBadge
               label={`Strength: ${claim.strength}`}
               variant={claim.strength === 'STRONG' ? 'success' : claim.strength === 'MODERATE' ? 'active' : 'warning'}
             />
           </View>
           <Text style={styles.claimStatement}>{claim.statement}</Text>
-          <Text style={styles.claimProofSub}>Supporting Evidence: {evidenceList.length} item(s)</Text>
+          <View style={styles.claimProofRow}>
+            <Ionicons name="link-outline" size={13} color={Colors.neutral[500]} />
+            <Text style={styles.claimProofSub}>Supporting Evidence: {evidenceList.length} verified item(s)</Text>
+          </View>
         </Card>
       ))}
 
       {/* Evidence Items */}
-      <Text style={[styles.tabSectionTitle, { marginTop: Spacing.md }]}>Attached Evidence Files</Text>
+      <Text style={[styles.tabSectionTitle, { marginTop: Spacing.md, marginBottom: Spacing.xs }]}>
+        Attached Proof Files ({evidenceList.length})
+      </Text>
       {evidenceList.map((evi: any) => (
-        <Card key={evi.id} variant="outlined" style={{ marginBottom: Spacing.sm }}>
+        <Card key={evi.id} variant="outlined" style={styles.eviCard}>
           <View style={styles.eviHeader}>
-            <Ionicons name="document-text" size={18} color={Colors.primary[600]} />
-            <Text style={styles.eviTitle}>{evi.title}</Text>
+            <View style={styles.eviIconBg}>
+              <Ionicons name="document-text" size={16} color={Colors.primary[600]} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.eviTitle}>{evi.title}</Text>
+              <Text style={styles.eviMeta}>{evi.type.replace(/_/g, ' ')} · {evi.documentDate || 'Dated'}</Text>
+            </View>
           </View>
           {evi.extractedFacts && evi.extractedFacts.length > 0 && (
             <View style={styles.eviFacts}>
               {evi.extractedFacts.map((f: any) => (
                 <View key={f.id} style={styles.eviFactChip}>
-                  <Ionicons name="flash" size={12} color={Colors.success[600]} />
+                  <Ionicons name="flash" size={11} color={Colors.success[600]} />
                   <Text style={styles.eviFactText}>{f.statement}</Text>
                 </View>
               ))}
@@ -385,10 +453,11 @@ function EvidenceTab({ caseData, evidenceList }: any) {
       ))}
 
       <Button
-        title="Add Proof to this Case"
+        title="Upload New Proof File"
         onPress={() => router.push('/(tabs)/evidence')}
         variant="secondary"
         icon="add-circle-outline"
+        size="md"
         style={{ marginTop: Spacing.md }}
       />
       <View style={{ height: Spacing['4xl'] }} />
@@ -402,134 +471,153 @@ function EvidenceTab({ caseData, evidenceList }: any) {
 function ActionsTab({ caseData, onToggleAction }: any) {
   return (
     <>
-      <Text style={styles.tabSectionTitle}>Step-by-Step Action Plan</Text>
-      <Text style={styles.tabSubtitle}>
-        Tap any step to mark complete. Completing steps updates your overall action readiness.
-      </Text>
-      {caseData.actionItems.map((action: any) => (
-        <Card
-          key={action.id}
-          variant="elevated"
-          style={styles.actionCard}
-          onPress={() => onToggleAction(action.id)}
-        >
-          <View style={styles.actionDetailHeader}>
-            <View style={[
-              styles.actionCheck,
-              action.status === 'DONE' && styles.actionCheckDone,
-            ]}>
-              {action.status === 'DONE' ? (
-                <Ionicons name="checkmark" size={14} color={Colors.neutral[0]} />
-              ) : (
-                <Text style={styles.actionNumber}>{action.order}</Text>
-              )}
+      <View style={styles.tabHeadingRow}>
+        <Text style={styles.tabSectionTitle}>Action Roadmap</Text>
+        <Text style={styles.tabSubtitle}>
+          Tap any step to mark complete. Completing actions updates your readiness score.
+        </Text>
+      </View>
+
+      {caseData.actionItems.map((action: any) => {
+        const isDone = action.status === 'DONE';
+        return (
+          <Card
+            key={action.id}
+            variant="elevated"
+            style={[styles.actionCard, isDone && styles.actionCardDone]}
+            onPress={() => onToggleAction(action.id)}
+          >
+            <View style={styles.actionDetailHeader}>
+              <View style={styles.actionNumBadge}>
+                <Text style={styles.actionNumText}>STEP {action.order}</Text>
+              </View>
+              <StatusBadge
+                label={isDone ? 'Completed' : 'Pending'}
+                variant={isDone ? 'success' : 'action_required'}
+              />
             </View>
-            <StatusBadge
-              label={action.status === 'DONE' ? 'Completed' : 'Action Required'}
-              variant={action.status === 'DONE' ? 'success' : 'action_required'}
-            />
-          </View>
-          <Text style={styles.actionDetailTitle}>{action.title}</Text>
-          <Text style={styles.actionDetailDesc}>{action.description}</Text>
-          {action.reason && (
-            <View style={styles.reasonBox}>
-              <Ionicons name="bulb-outline" size={14} color={Colors.info[600]} />
-              <Text style={styles.reasonText}>{action.reason}</Text>
-            </View>
-          )}
-          {action.requirements && action.requirements.length > 0 && (
-            <View style={styles.requirementsList}>
-              <Text style={styles.requirementsTitle}>Required:</Text>
-              {action.requirements.map((req: string, i: number) => (
-                <View key={i} style={styles.requirementItem}>
-                  <View style={styles.requirementDot} />
-                  <Text style={styles.requirementText}>{req}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </Card>
-      ))}
+            <Text style={[styles.actionDetailTitle, isDone && styles.actionTitleDone]}>
+              {action.title}
+            </Text>
+            <Text style={styles.actionDetailDesc}>{action.description}</Text>
+
+            {action.reason && (
+              <View style={styles.reasonBox}>
+                <Ionicons name="bulb-outline" size={13} color={Colors.info[700]} />
+                <Text style={styles.reasonText}>{action.reason}</Text>
+              </View>
+            )}
+
+            {action.requirements && action.requirements.length > 0 && (
+              <View style={styles.requirementsList}>
+                <Text style={styles.requirementsTitle}>Required Prerequisites:</Text>
+                {action.requirements.map((req: string, i: number) => (
+                  <View key={i} style={styles.requirementItem}>
+                    <Ionicons name="checkmark-circle-outline" size={12} color={Colors.success[600]} />
+                    <Text style={styles.requirementText}>{req}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </Card>
+        );
+      })}
       <View style={{ height: Spacing['4xl'] }} />
     </>
   );
 }
 
 // -------------------------------------------------------------
-// Documents Tab
+// Documents Tab (Studio Format)
 // -------------------------------------------------------------
-function DocumentsTab({ caseData, draftingDoc, onGenerateDoc, onViewDoc }: any) {
+function DocumentsTab({ caseData, draftingType, onGenerateDoc, onViewDoc }: any) {
   const documents: CaseDocument[] = caseData.documents || [];
+
+  const TEMPLATES: { type: CaseDocument['type']; title: string; desc: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+    {
+      type: 'REFUND_REQUEST',
+      title: 'Formal Legal Demand Notice',
+      desc: '7-15 day cure demand notice citing contracts & statutory codes.',
+      icon: 'document-text',
+    },
+    {
+      type: 'COMPLAINT',
+      title: 'Statutory Authority Complaint',
+      desc: 'Draft complaint for Consumer Commission, RERA, or Cyber Cell.',
+      icon: 'business',
+    },
+    {
+      type: 'LAWYER_BRIEF',
+      title: 'Advocate Case Summary Brief',
+      desc: 'Chronological summary of verified facts for your lawyer consultation.',
+      icon: 'reader',
+    },
+  ];
 
   return (
     <>
-      <Text style={styles.tabSectionTitle}>Drafted Legal Documents</Text>
+      <View style={styles.tabHeadingRow}>
+        <Text style={styles.tabSectionTitle}>Legal Document Studio</Text>
+        <Text style={styles.tabSubtitle}>Draft formal notices and complaints grounded in your verified facts</Text>
+      </View>
 
-      {documents.length > 0 ? (
-        documents.map((doc) => (
-          <Card
-            key={doc.id}
-            variant="elevated"
-            style={{ marginBottom: Spacing.md }}
-            onPress={() => onViewDoc(doc)}
-          >
-            <View style={styles.docRow}>
-              <View style={styles.docIconBg}>
-                <Ionicons name="document-text" size={22} color={Colors.primary[600]} />
+      {/* Generated Documents List */}
+      {documents.length > 0 && (
+        <View style={{ marginBottom: Spacing.lg }}>
+          <Text style={styles.subSectionTitle}>Drafted Dossier Documents ({documents.length})</Text>
+          {documents.map((doc) => (
+            <Card
+              key={doc.id}
+              variant="elevated"
+              style={styles.docItemCard}
+              onPress={() => onViewDoc(doc)}
+            >
+              <View style={styles.docRow}>
+                <View style={styles.docIconBg}>
+                  <Ionicons name="document-text" size={20} color={Colors.primary[600]} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.docTitleText}>{doc.title}</Text>
+                  <Text style={styles.docDateText}>
+                    Drafted {new Date(doc.generatedAt).toLocaleDateString()} · {doc.type.replace('_', ' ')}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={Colors.neutral[400]} />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.docTitleText}>{doc.title}</Text>
-                <Text style={styles.docDateText}>
-                  {new Date(doc.generatedAt).toLocaleDateString()} · {doc.type.replace('_', ' ')}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={Colors.neutral[400]} />
-            </View>
-          </Card>
-        ))
-      ) : (
-        <Card variant="outlined" style={{ marginBottom: Spacing.md }}>
-          <View style={styles.docEmptyContainer}>
-            <Ionicons name="document-text-outline" size={36} color={Colors.neutral[400]} />
-            <Text style={styles.docEmptyTitle}>No documents drafted yet</Text>
-            <Text style={styles.docEmptyDesc}>
-              Generate formal legal demand notices, complaints, and advocate briefs grounded in your verified facts.
-            </Text>
-          </View>
-        </Card>
-      )}
-
-      {draftingDoc && (
-        <View style={styles.draftingIndicator}>
-          <ActivityIndicator size="small" color={Colors.primary[500]} />
-          <Text style={styles.draftingText}>AI Legal Draftsman is preparing formal notice...</Text>
+            </Card>
+          ))}
         </View>
       )}
 
-      <Text style={[styles.tabSectionTitle, { marginTop: Spacing.md }]}>Draft With AI</Text>
-      <View style={styles.docActionsWrap}>
-        <Button
-          title="Draft Formal Demand Notice"
-          onPress={() => onGenerateDoc('REFUND_REQUEST')}
-          variant="primary"
-          icon="document-attach-outline"
-          disabled={draftingDoc}
-        />
-        <Button
-          title="Draft Statutory Complaint"
-          onPress={() => onGenerateDoc('COMPLAINT')}
-          variant="secondary"
-          icon="business-outline"
-          disabled={draftingDoc}
-        />
-        <Button
-          title="Draft Advocate Case Brief"
-          onPress={() => onGenerateDoc('LAWYER_BRIEF')}
-          variant="outline"
-          icon="reader-outline"
-          disabled={draftingDoc}
-        />
-      </View>
+      {/* Available Draft Templates */}
+      <Text style={styles.subSectionTitle}>Draft New Document with AI</Text>
+
+      {TEMPLATES.map((tmpl) => {
+        const isDrafting = draftingType === tmpl.type;
+        return (
+          <Card key={tmpl.type} variant="outlined" style={styles.templateCard}>
+            <View style={styles.templateRow}>
+              <View style={styles.templateIconBg}>
+                <Ionicons name={tmpl.icon} size={20} color={Colors.primary[600]} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.templateTitle}>{tmpl.title}</Text>
+                <Text style={styles.templateDesc}>{tmpl.desc}</Text>
+              </View>
+            </View>
+            <View style={styles.templateFooter}>
+              <Button
+                title={isDrafting ? 'Drafting with Gemini...' : 'Draft Document'}
+                onPress={() => onGenerateDoc(tmpl.type)}
+                variant={tmpl.type === 'REFUND_REQUEST' ? 'primary' : 'secondary'}
+                size="sm"
+                icon={isDrafting ? undefined : 'sparkles-outline'}
+                disabled={Boolean(draftingType)}
+              />
+            </View>
+          </Card>
+        );
+      })}
 
       <View style={{ height: Spacing['4xl'] }} />
     </>
@@ -551,63 +639,66 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     backgroundColor: Colors.neutral[0],
     borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral[100],
+    borderBottomColor: Colors.neutral[200],
   },
   backButton: {
     padding: Spacing.xs,
-    marginRight: Spacing.sm,
+    marginRight: Spacing.xs,
   },
   topBarCenter: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginRight: Spacing.sm,
+    gap: Spacing.sm,
   },
   topBarTitle: {
     fontSize: FontSize.md,
     fontWeight: '700',
     color: Colors.neutral[900],
     flex: 1,
-    marginRight: Spacing.sm,
   },
-  tabContainer: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
+  // Compact Segmented Tabs
+  segmentedContainer: {
     backgroundColor: Colors.neutral[0],
-    gap: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral[100],
+    borderBottomColor: Colors.neutral[200],
   },
-  tab: {
+  segmentedControl: {
+    flexDirection: 'row',
+    backgroundColor: Colors.neutral[100],
+    borderRadius: BorderRadius.md,
+    padding: 2,
+  },
+  segmentTab: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.neutral[100],
-    marginRight: Spacing.xs,
+    justifyContent: 'center',
+    gap: 3,
+    paddingVertical: 7,
+    borderRadius: BorderRadius.sm,
   },
-  tabActive: {
-    backgroundColor: Colors.primary[50],
-    borderWidth: 1,
-    borderColor: Colors.primary[300],
+  segmentTabActive: {
+    backgroundColor: Colors.neutral[0],
+    ...Shadow.sm,
   },
-  tabText: {
-    fontSize: FontSize.xs,
+  segmentLabel: {
+    fontSize: 11,
     fontWeight: '500',
     color: Colors.neutral[600],
   },
-  tabTextActive: {
-    color: Colors.primary[700],
+  segmentLabelActive: {
     fontWeight: '700',
+    color: Colors.primary[700],
   },
   content: {
     flex: 1,
   },
   contentInner: {
-    padding: Spacing.lg,
+    padding: Spacing.md,
   },
   notFoundCenter: {
     flex: 1,
@@ -621,13 +712,22 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
     textAlign: 'center',
   },
-  overviewHeader: {
+  heroCard: {
+    backgroundColor: Colors.neutral[0],
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.neutral[200],
+    marginBottom: Spacing.md,
+    ...Shadow.sm,
+  },
+  heroTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
-  catBadge: {
+  heroCatBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -635,51 +735,134 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: BorderRadius.sm,
   },
-  catLabel: {
-    fontSize: FontSize.xs,
-    fontWeight: '600',
+  heroCatText: {
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
-  jurisdictionBadge: {
+  jurisdictionChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
+    maxWidth: 180,
   },
-  jurisdictionText: {
+  jurisdictionChipText: {
     fontSize: FontSize.xs,
     color: Colors.neutral[500],
   },
-  description: {
-    fontSize: FontSize.sm,
-    color: Colors.neutral[800],
-    lineHeight: 22,
+  heroTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: '700',
+    color: Colors.neutral[900],
+    letterSpacing: -0.3,
+    marginTop: Spacing.xs,
+    marginBottom: 4,
+  },
+  heroDesc: {
+    fontSize: FontSize.xs,
+    color: Colors.neutral[600],
+    lineHeight: 18,
+  },
+  statsStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.neutral[50],
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.sm,
+    marginTop: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.neutral[200],
+  },
+  statBox: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: FontSize.md,
+    fontWeight: '700',
+    color: Colors.primary[700],
+  },
+  statLabel: {
+    fontSize: 10,
+    color: Colors.neutral[500],
+    marginTop: 1,
+  },
+  statDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: Colors.neutral[200],
+  },
+  prepCard: {
+    marginBottom: Spacing.md,
+  },
+  prepHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.xs,
+  },
+  prepHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  prepScoreTotal: {
+    fontSize: FontSize.xs,
+    fontWeight: '700',
+    color: Colors.primary[700],
+  },
+  cardSection: {
+    marginBottom: Spacing.md,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
   },
   sectionTitle: {
     fontSize: FontSize.sm,
     fontWeight: '700',
     color: Colors.neutral[900],
-    marginBottom: Spacing.sm,
+  },
+  headerActionText: {
+    fontSize: FontSize.xs,
+    fontWeight: '600',
+    color: Colors.primary[600],
   },
   factRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: Spacing.sm,
-    marginBottom: Spacing.sm,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.neutral[100],
   },
-  factDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginTop: 6,
+  factStatusIcon: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  factVerifiedBg: {
+    backgroundColor: Colors.success[50],
+  },
+  factStatedBg: {
+    backgroundColor: Colors.info[50],
   },
   factStatement: {
-    fontSize: FontSize.sm,
-    color: Colors.neutral[900],
-    lineHeight: 20,
-  },
-  factStatus: {
     fontSize: FontSize.xs,
-    color: Colors.neutral[500],
+    color: Colors.neutral[900],
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+  factMeta: {
+    fontSize: 10,
+    color: Colors.neutral[400],
     marginTop: 2,
+    textTransform: 'capitalize',
   },
   contradictionCard: {
     borderColor: Colors.warning[300],
@@ -689,54 +872,57 @@ const styles = StyleSheet.create({
   contradictionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: 6,
     marginBottom: Spacing.xs,
   },
   contradictionTitle: {
-    fontSize: FontSize.sm,
+    fontSize: FontSize.xs,
     fontWeight: '700',
     color: Colors.warning[700],
+    textTransform: 'uppercase',
   },
   contradictionBody: {
-    marginTop: Spacing.xs,
+    marginTop: 2,
   },
   contradictionDesc: {
     fontSize: FontSize.xs,
     color: Colors.warning[700],
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   contradictionSources: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
   },
   contradictionSource: {
     flex: 1,
     backgroundColor: Colors.neutral[0],
-    padding: Spacing.sm,
+    padding: Spacing.xs,
     borderRadius: BorderRadius.sm,
   },
   sourceLabel: {
-    fontSize: FontSize.xs,
-    fontWeight: '600',
-    color: Colors.neutral[500],
+    fontSize: 9,
+    fontWeight: '700',
+    color: Colors.neutral[400],
+    textTransform: 'uppercase',
   },
   sourceValue: {
     fontSize: FontSize.xs,
     color: Colors.neutral[800],
-    marginTop: 2,
+    marginTop: 1,
   },
   contradictionVs: {
-    paddingHorizontal: Spacing.xs,
+    paddingHorizontal: 2,
   },
   vsText: {
-    fontSize: FontSize.xs,
-    fontWeight: '700',
-    color: Colors.neutral[400],
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.warning[600],
   },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
+    gap: Spacing.sm,
     paddingVertical: Spacing.sm,
   },
   actionBorder: {
@@ -744,9 +930,9 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.neutral[100],
   },
   actionCheck: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 1.5,
     borderColor: Colors.neutral[300],
     justifyContent: 'center',
@@ -757,12 +943,12 @@ const styles = StyleSheet.create({
     borderColor: Colors.success[500],
   },
   actionNumber: {
-    fontSize: FontSize.xs,
+    fontSize: 10,
     fontWeight: '700',
-    color: Colors.neutral[600],
+    color: Colors.neutral[500],
   },
   actionTitle: {
-    fontSize: FontSize.sm,
+    fontSize: FontSize.xs,
     fontWeight: '600',
     color: Colors.neutral[900],
   },
@@ -771,35 +957,45 @@ const styles = StyleSheet.create({
     color: Colors.neutral[400],
   },
   actionDesc: {
-    fontSize: FontSize.xs,
+    fontSize: 11,
     color: Colors.neutral[500],
-    marginTop: 2,
+    marginTop: 1,
+  },
+  tabHeadingRow: {
+    marginBottom: Spacing.sm,
   },
   tabSectionTitle: {
     fontSize: FontSize.md,
     fontWeight: '700',
     color: Colors.neutral[900],
-    marginBottom: Spacing.xs,
   },
   tabSubtitle: {
     fontSize: FontSize.xs,
     color: Colors.neutral[500],
-    marginBottom: Spacing.md,
+    marginTop: 2,
+  },
+  subSectionTitle: {
+    fontSize: FontSize.xs,
+    fontWeight: '700',
+    color: Colors.neutral[600],
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: Spacing.xs,
   },
   timelineItem: {
     flexDirection: 'row',
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   timelineLeft: {
-    width: 24,
+    width: 20,
     alignItems: 'center',
   },
   timelineDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: Colors.primary[500],
-    marginTop: 4,
+    marginTop: 6,
   },
   timelineLine: {
     width: 2,
@@ -809,62 +1005,106 @@ const styles = StyleSheet.create({
   },
   timelineCard: {
     flex: 1,
-    marginLeft: Spacing.sm,
+    marginLeft: Spacing.xs,
+    padding: Spacing.md,
+  },
+  timelineHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
   },
   timelineDate: {
     fontSize: FontSize.xs,
     fontWeight: '700',
-    color: Colors.primary[600],
+    color: Colors.primary[700],
   },
   timelineTitle: {
-    fontSize: FontSize.sm,
+    fontSize: FontSize.xs,
     fontWeight: '600',
     color: Colors.neutral[900],
-    marginTop: 2,
   },
   timelineDesc: {
-    fontSize: FontSize.xs,
+    fontSize: 11,
     color: Colors.neutral[600],
-    marginTop: 4,
+    marginTop: 2,
+    lineHeight: 16,
   },
   timelineSource: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: Spacing.xs,
+    gap: 2,
   },
   timelineSourceText: {
-    fontSize: FontSize.xs,
-    color: Colors.primary[700],
-    fontWeight: '500',
+    fontSize: 9,
+    color: Colors.neutral[400],
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  claimCard: {
+    marginBottom: Spacing.sm,
   },
   claimHeader: {
-    marginBottom: Spacing.xs,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  claimBadgeTitle: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: Colors.neutral[400],
+    letterSpacing: 0.5,
   },
   claimStatement: {
-    fontSize: FontSize.sm,
+    fontSize: FontSize.xs,
     fontWeight: '600',
     color: Colors.neutral[900],
+    lineHeight: 18,
+  },
+  claimProofRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
   },
   claimProofSub: {
-    fontSize: FontSize.xs,
+    fontSize: 10,
     color: Colors.neutral[500],
-    marginTop: Spacing.xs,
+  },
+  eviCard: {
+    marginBottom: Spacing.sm,
+    padding: Spacing.md,
   },
   eviHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
-    marginBottom: Spacing.xs,
+    gap: Spacing.sm,
+  },
+  eviIconBg: {
+    width: 32,
+    height: 32,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.primary[50],
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   eviTitle: {
-    fontSize: FontSize.sm,
+    fontSize: FontSize.xs,
     fontWeight: '600',
     color: Colors.neutral[900],
   },
+  eviMeta: {
+    fontSize: 10,
+    color: Colors.neutral[500],
+    marginTop: 1,
+  },
   eviFacts: {
-    gap: 4,
-    marginTop: 4,
+    gap: 3,
+    marginTop: 6,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: Colors.neutral[100],
   },
   eviFactChip: {
     flexDirection: 'row',
@@ -872,30 +1112,44 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   eviFactText: {
-    fontSize: FontSize.xs,
+    fontSize: 11,
     color: Colors.neutral[700],
     flex: 1,
+    lineHeight: 16,
   },
   actionCard: {
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  actionCardDone: {
+    opacity: 0.7,
   },
   actionDetailHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.xs,
+    marginBottom: 4,
+  },
+  actionNumBadge: {
+    backgroundColor: Colors.primary[50],
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.xs,
+  },
+  actionNumText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: Colors.primary[700],
   },
   actionDetailTitle: {
-    fontSize: FontSize.md,
+    fontSize: FontSize.sm,
     fontWeight: '700',
     color: Colors.neutral[900],
-    marginTop: 4,
   },
   actionDetailDesc: {
-    fontSize: FontSize.sm,
+    fontSize: FontSize.xs,
     color: Colors.neutral[600],
-    lineHeight: 20,
-    marginTop: 4,
+    lineHeight: 18,
+    marginTop: 2,
   },
   reasonBox: {
     flexDirection: 'row',
@@ -907,92 +1161,90 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   reasonText: {
-    fontSize: FontSize.xs,
+    fontSize: 11,
     color: Colors.info[700],
     flex: 1,
-    lineHeight: 18,
+    lineHeight: 16,
   },
   requirementsList: {
-    marginTop: Spacing.sm,
+    marginTop: Spacing.xs,
+    paddingTop: Spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: Colors.neutral[100],
   },
   requirementsTitle: {
-    fontSize: FontSize.xs,
+    fontSize: 10,
     fontWeight: '600',
-    color: Colors.neutral[600],
+    color: Colors.neutral[500],
+    marginBottom: 2,
   },
   requirementItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
     marginTop: 2,
   },
-  requirementDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.neutral[400],
-  },
   requirementText: {
-    fontSize: FontSize.xs,
+    fontSize: 11,
     color: Colors.neutral[700],
+  },
+  docItemCard: {
+    marginBottom: Spacing.xs,
+    padding: Spacing.sm,
   },
   docRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
+    gap: Spacing.sm,
   },
   docIconBg: {
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.md,
+    width: 34,
+    height: 34,
+    borderRadius: BorderRadius.sm,
     backgroundColor: Colors.primary[50],
     justifyContent: 'center',
     alignItems: 'center',
   },
   docTitleText: {
-    fontSize: FontSize.sm,
+    fontSize: FontSize.xs,
     fontWeight: '600',
     color: Colors.neutral[900],
   },
   docDateText: {
+    fontSize: 10,
+    color: Colors.neutral[500],
+    marginTop: 1,
+  },
+  templateCard: {
+    marginBottom: Spacing.sm,
+    padding: Spacing.md,
+  },
+  templateRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  templateIconBg: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.primary[50],
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  templateTitle: {
     fontSize: FontSize.xs,
+    fontWeight: '700',
+    color: Colors.neutral[900],
+  },
+  templateDesc: {
+    fontSize: 11,
     color: Colors.neutral[500],
     marginTop: 2,
+    lineHeight: 16,
   },
-  docEmptyContainer: {
-    alignItems: 'center',
-    padding: Spacing.xl,
-  },
-  docEmptyTitle: {
-    fontSize: FontSize.md,
-    fontWeight: '600',
-    color: Colors.neutral[800],
+  templateFooter: {
     marginTop: Spacing.sm,
-  },
-  docEmptyDesc: {
-    fontSize: FontSize.xs,
-    color: Colors.neutral[500],
-    textAlign: 'center',
-    lineHeight: 18,
-    marginTop: Spacing.xs,
-    maxWidth: 260,
-  },
-  draftingIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    backgroundColor: Colors.primary[50],
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.md,
-  },
-  draftingText: {
-    fontSize: FontSize.xs,
-    color: Colors.primary[700],
-    fontWeight: '600',
-  },
-  docActionsWrap: {
-    gap: Spacing.sm,
+    alignItems: 'flex-end',
   },
   docModalSafe: {
     flex: 1,
@@ -1002,46 +1254,53 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
     backgroundColor: Colors.neutral[0],
     borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral[100],
+    borderBottomColor: Colors.neutral[200],
   },
   docModalTitle: {
-    fontSize: FontSize.md,
+    fontSize: FontSize.sm,
     fontWeight: '700',
     color: Colors.neutral[900],
-    flex: 1,
-    marginRight: Spacing.sm,
+  },
+  docModalSub: {
+    fontSize: 10,
+    color: Colors.neutral[400],
+    marginTop: 1,
+  },
+  closeBtn: {
+    padding: 4,
   },
   docModalScroll: {
     flex: 1,
   },
   docModalContent: {
-    padding: Spacing.xl,
+    padding: Spacing.lg,
   },
   docTypeBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   docGeneratedAt: {
-    fontSize: FontSize.xs,
+    fontSize: 10,
     color: Colors.neutral[500],
   },
   docPaper: {
     backgroundColor: Colors.neutral[0],
-    padding: Spacing.xl,
-    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.md,
     borderWidth: 1,
     borderColor: Colors.neutral[200],
+    ...Shadow.sm,
   },
   docTextContent: {
-    fontSize: FontSize.xs,
+    fontSize: 11,
     fontFamily: 'monospace',
     color: Colors.neutral[900],
-    lineHeight: 20,
+    lineHeight: 18,
   },
 });
