@@ -152,3 +152,4 @@ Kayda Sathi provides legal information and action guidance. It is **not** a lawy
 ## License
 
 Private — Hackathon project
+
