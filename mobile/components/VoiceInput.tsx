@@ -86,9 +86,7 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
-      }
-      if (recorder.isRecording) {
-        recorder.stop().catch(() => {});
+        timerRef.current = null;
       }
     };
   }, []);
