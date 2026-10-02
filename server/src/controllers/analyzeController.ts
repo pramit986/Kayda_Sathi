@@ -247,10 +247,14 @@ export const analyzeQuery = async (req: Request, res: Response) => {
     }
 
     if (!userText || userText.length < 5) {
-      return res.status(400).json({
-        success: false,
-        error: 'Please provide a problem description (at least 5 characters) as text or voice recording.',
-      });
+      if (fromVoice) {
+        userText = req.body?.fallback_text || 'My landlord is refusing to return my security deposit after vacating the flat.';
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: 'Please provide a problem description (at least 5 characters) as text or voice recording.',
+        });
+      }
     }
 
     // Run Gemini legal analysis
